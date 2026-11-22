@@ -1,0 +1,14 @@
+{
+  "name": "stock-picker",
+  "version": "0.1.0",
+  "description": "Auditable multi-period stock screening workspace",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test",
+    "check": "node --check src/server.js && node --check src/engine.js && node --check src/db.js"
+  }
+}

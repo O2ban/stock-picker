@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0d0f13">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <!-- iOS 贴底：black-translucent 会让 iOS standalone 把 home indicator 区域算成内容外白台，改 default（与 cagent-tauri 2026-09-28 基线一致） -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="选股">
+  <title>选股</title>
+  <!-- iOS 不识别相对路径 manifest，会让 PWA 退化为普通网页（进不了 standalone）；此处钉绝对路径，与部署子路径一致 -->
+  <link rel="manifest" href="/stock-picker/manifest.webmanifest">
+  <link rel="apple-touch-icon" sizes="180x180" href="/stock-picker/icons/apple-touch-icon-180.png">
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./chart.css">
+  <link rel="stylesheet" href="./bt-review.css">
+</head>
+<body>
+  <div class="app-frame">
+    <header class="app-top">
+      <div class="app-top-title">自选</div>
+      <div id="system-status" class="app-top-status">连接中…</div>
+    </header>
+    <div id="offline-tip" class="offline-tip" hidden></div>
+
+    <main class="app-main">
+      <!-- ============ 自选 ============ -->
+      <section id="tab-watchlist" class="tab-panel active" data-panel="watchlist">
+        <div class="bar">
+          <div class="bar-lead"><strong>自选</strong><span id="watch-meta" class="bar-meta"></span></div>
+          <div class="bar-actions">
+            <button id="watch-sort" class="ghost-btn sort-btn" type="button" aria-label="按涨幅排序">涨幅</button>
+            <button id="watch-refresh" class="icon-btn" type="button" aria-label="刷新">⟳</button>
+            <button id="watch-add" class="icon-btn" type="button" aria-label="添加自选">＋</button>
+          </div>
+        </div>
+        <div class="scroll-area">
+          <div id="watch-empty" class="list-empty">自选列表为空<br><span>点右上角「＋」搜索代码或名称添加</span></div>
+          <ul id="watch-list" class="stock-list"></ul>
+        </div>
+      </section>
+
+      <!-- ============ 选股 ============ -->
+      <section id="tab-screener" class="tab-panel" data-panel="screener">
+        <div class="bar">
+          <select id="strategy-lib" class="strategy-select" aria-label="选股策略"><option value="">选股策略…</option></select>
+          <button id="run" class="run-btn" type="button">选股</button>
+        </div>
+        <div class="meta-row" id="screen-top">
+          <div class="foot-scroll">
+            <div id="history-bar" class="history-bar hidden"></div>
+          </div>
+          <button id="screen-sort" class="ghost-btn sort-btn" type="button" aria-label="按涨幅排序">涨幅</button>
+          <button id="screen-settings" class="ghost-btn" type="button">策略与范围 ›</button>
+        </div>
+        <div class="scroll-area">
+          <div id="empty-state" class="list-empty">选好策略后点「选股」<br><span>结果会显示在这里</span></div>
+          <ul id="results-body" class="stock-list"></ul>
+        </div>
+        <div class="meta-row" id="screen-foot">
+          <span id="run-meta" class="run-meta" role="button" tabindex="0" aria-label="选股说明，点击查看完整内容">尚未运行策略</span>
+          <div id="meta-pop" class="meta-pop" hidden></div>
+        </div>
+      </section>
+
+      <!-- ============ 买票清单 ============ -->
+      <section id="tab-picks" class="tab-panel" data-panel="picks">
+        <div class="bar">
+          <div class="bar-lead"><strong>买票清单</strong><span id="picks-meta" class="bar-meta"></span></div>
+          <div class="bar-actions">
+            <button id="picks-sort" class="ghost-btn sort-btn" type="button" aria-label="按涨幅排序">涨幅</button>
+            <button id="picks-refresh" class="icon-btn" type="button" aria-label="刷新">⟳</button>
+            <button id="picks-run" class="ghost-btn" type="button" aria-label="现在跑一次">现在跑</button>
+          </div>
+        </div>
+        <div class="meta-row" id="picks-top">
+          <div class="foot-scroll">
+            <div id="picks-dates" class="history-bar hidden"></div>
+          </div>
+        </div>
+        <div class="scroll-area">
+          <div id="picks-note" class="picks-note"></div>
+          <div id="picks-factors" class="picks-factors hidden"></div>
+          <div id="picks-empty" class="list-empty">今天还没有记下任何出手的票<br><span>早盘 9:35~10:00 每分钟自动盯一次，出手的票会出现在这里</span></div>
+          <ul id="picks-body" class="stock-list"></ul>
+        </div>
+        <div class="meta-row" id="picks-foot">
+          <span id="picks-stamp" class="run-meta">—</span>
+        </div>
+      </section>
+
+      <!-- ============ 复盘 ============ -->
+      <section id="tab-review" class="tab-panel" data-panel="review">
+        <div class="bar">
+          <div class="bar-lead"><strong>复盘</strong><span id="rv-meta" class="bar-meta"></span></div>
+          <div class="bar-actions">
+            <button id="rv-refresh" class="icon-btn" type="button" aria-label="刷新">⟳</button>
+          </div>
+        </div>
+        <div class="meta-row" id="rv-plan-bar">
+          <label class="rv-plan-label"><span>回测方案</span><select id="rv-plan" class="strategy-select"></select></label>
+        </div>
+        <!-- 参数可调回测面板：只对 301557 有效（其他票无分钟数据） -->
+        <div id="rv-recalc" class="rv-recalc" hidden>
+          <div class="rv-recalc-h">回测参数 <span class="rv-recalc-tag">仅 301557</span></div>
+          <div class="rv-recalc-row">
+            <label class="rv-recalc-field"><span>止盈（%）</span>
+              <input id="rv-tp" class="rv-recalc-input" type="number" step="0.1" value="1">
+            </label>
+            <label class="rv-recalc-field"><span>止损</span>
+              <select id="rv-sl-mode" class="rv-recalc-input">
+                <option value="none" selected>不设止损（复现原口径）</option>
+                <option value="minute">固定百分比止损（按分钟收盘判定）</option>
+                <option value="close">收盘价止损卖出（按 T1 收盘判定）</option>
+              </select>
+            </label>
+            <label class="rv-recalc-field rv-recalc-sl"><span>止损幅度（%）</span>
+              <input id="rv-sl" class="rv-recalc-input" type="number" step="0.1" value="-2">
+            </label>
+            <button id="rv-recalc-run" class="rv-recalc-btn" type="button">运算</button>
+          </div>
+          <div class="rv-recalc-note">数据限制：分钟数据仅收盘价，止损按分钟收盘触发，无法判断分钟内瞬时低点；同一分钟止盈止损冲突时止盈优先；重算仅对 301557（常友科技）有效。</div>
+        </div>
+        <div class="scroll-area">
+          <div id="rv-range" class="picks-note rv-range"></div>
+          <div id="rv-cond" class="rv-cond"></div>
+          <div id="rv-empty" class="list-empty">还没有回测方案</div>
+          <ul id="rv-list" class="stock-list"></ul>
+        </div>
+        <div class="meta-row" id="rv-foot">
+          <span id="rv-stamp" class="run-meta">—</span>
+        </div>
+      </section>
+    </main>
+
+    <nav class="tabbar">
+      <button class="tab-btn active" type="button" data-tab="watchlist">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13l4.5-4.5 3 3L20 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 20h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>自选</span>
+      </button>
+      <button class="tab-btn" type="button" data-tab="screener">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>选股</span>
+      </button>
+      <button class="tab-btn" type="button" data-tab="picks">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h9l3 3v13H6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 10h6M9 14h6M9 18h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>清单</span>
+      </button>
+      <button class="tab-btn" type="button" data-tab="review">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 15l3.5-4 3 2.5L20 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>复盘</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- ============ 下钻：添加自选 ============ -->
+  <div id="add-page" class="drill-page" aria-hidden="true">
+    <header class="drill-head">
+      <button class="drill-back" type="button" data-close="add-page" aria-label="返回">‹</button>
+      <span>添加自选</span>
+    </header>
+    <div class="drill-search-wrap">
+      <input id="add-search" class="drill-search" type="search" inputmode="search" placeholder="输入代码或名称，如 600000 / 浦发">
+    </div>
+    <div class="drill-body scroll-area">
+      <div id="add-empty" class="list-empty">输入代码或名称开始搜索</div>
+      <ul id="add-results" class="stock-list"></ul>
+    </div>
+  </div>
+
+  <!-- ============ 下钻：策略与范围 ============ -->
+  <div id="settings-page" class="drill-page" aria-hidden="true">
+    <header class="drill-head">
+      <button class="drill-back" type="button" data-close="settings-page" aria-label="返回">‹</button>
+      <span>策略与范围</span>
+      <button id="strategy-save" class="drill-action" type="button">保存</button>
+    </header>
+    <div class="drill-body scroll-area">
+      <label class="field-label" for="strategy-name">策略名称</label>
+      <input id="strategy-name" class="text-input" value="日周趋势与量能">
+      <div class="strategy-tabs" id="strategy-tabs">
+        <button type="button" class="st-tab active" data-stab="summary">策略说明</button>
+        <button type="button" class="st-tab" data-stab="code">策略代码</button>
+      </div>
+      <div class="st-pane active" data-spane="summary">
+        <div class="strategy-summary">
+          <div class="ss-head">条件说明 <span id="strategy-summary-count" class="ss-count"></span></div>
+          <div id="strategy-summary-body" class="ss-body"><p class="ss-empty">解析策略后在此按模块列出条件。</p></div>
+        </div>
+      </div>
+      <div class="st-pane" data-spane="code">
+        <textarea id="dsl-editor" class="dsl-input" spellcheck="false"></textarea>
+      </div>
+
+      <h3 class="drill-section">选股范围</h3>
+      <label class="field-label" for="board">板块范围</label>
+      <select id="board" class="select-input">
+        <option value="main" selected>主板（沪+深）</option>
+        <option value="">全部股票</option>
+        <option value="sh_main">沪市主板</option>
+        <option value="sz_main">深市主板</option>
+        <option value="sz_gem">创业板</option>
+        <option value="sh_star">科创板</option>
+        <option value="bj">北交所</option>
+      </select>
+      <label class="field-label" for="adjust">价格口径</label>
+      <select id="adjust" class="select-input">
+        <option value="qfq">前复权 qfq</option>
+        <option value="hfq">后复权 hfq</option>
+        <option value="raw">未复权 raw</option>
+      </select>
+      <label class="field-label" for="base-date">选股基准日 <span>默认最新交易日</span></label>
+      <input id="base-date" type="date" class="text-input">
+      <div class="date-quick" id="date-quick">
+        <button type="button" data-offset="clear" class="active">最新</button>
+        <button type="button" data-offset="7">一周前</button>
+        <button type="button" data-offset="30">一月前</button>
+        <button type="button" data-offset="90">三月前</button>
+      </div>
+      <p class="field-hint" id="base-date-hint">站在该日视角运行策略，用于回看验证。</p>
+      <div class="guardrail"><span class="guardrail-dot"></span><div><strong>执行边界已开启</strong><p>只执行白名单指标，不运行任意脚本或 SQL。</p></div></div>
+      <div id="validation" class="feedback" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <!-- ============ 看盘抽屉（保持原有结构）============ -->
+  <div id="chart-backdrop" class="chart-backdrop"></div>
+  <aside id="chart-drawer" class="chart-drawer" aria-hidden="true" aria-label="看盘">
+    <div class="chart-head">
+      <div class="chart-title"><span class="stock-code" id="chart-code"></span><span class="stock-name" id="chart-name"></span></div>
+      <div class="chart-title-actions">
+        <button id="chart-add" class="chart-icon-btn" type="button" aria-label="加自选">＋</button>
+        <button id="chart-copy" class="button button-quiet" type="button">复制代码</button>
+      </div>
+      <button id="chart-close" class="chart-close" type="button" aria-label="关闭">×</button>
+    </div>
+    <div id="chart-offline" class="chart-offline" hidden></div>
+    <div id="chart-quote" class="chart-quote"></div>
+    <div class="chart-toolbar">
+      <div class="seg" id="period-seg"><button type="button" data-period="min">分时</button><button type="button" data-period="day" class="active">日线</button><button type="button" data-period="week">周线</button><button type="button" data-period="data">数据</button></div>
+      <div class="adjust-menu-wrap">
+        <button type="button" id="adjust-toggle" class="adjust-toggle" aria-label="复权设置" aria-haspopup="true" aria-expanded="false">⋯</button>
+        <div class="seg adjust-pop" id="adjust-seg" hidden><button type="button" data-adjust="qfq" class="active">前复权</button><button type="button" data-adjust="hfq">后复权</button><button type="button" data-adjust="raw">不复权</button></div>
+      </div>
+    </div>
+    <div id="chart-error" class="chart-error" hidden></div>
+    <div id="chart-data" class="chart-data" hidden></div>
+    <div id="chart-canvas" class="chart-canvas"></div>
+  </aside>
+  <!-- 分时浮层：挂在 body 根下（抽屉外），真正相对视口定位。
+       不作为抽屉/canvas 子孙参与其 flex 布局，避免浮层显示/隐藏牵动 canvas
+       高度重新分配、导致 gridRects 主图下沿漂移；也不受抽屉 transform/overflow 影响。 -->
+  <div id="chart-submin" class="chart-submin" hidden>
+    <div class="cs-head">
+      <button id="rvd-submin-prev" class="cs-nav" type="button" aria-label="前一天">‹</button>
+      <b id="rvd-submin-title"></b>
+      <button id="rvd-submin-next" class="cs-nav" type="button" aria-label="后一天">›</button>
+      <button class="cs-close" type="button" aria-label="收起">×</button>
+    </div>
+    <div id="rvd-submin-canvas" class="cs-canvas"></div>
+  </div>
+
+  <script src="./vendor/echarts.min.js"></script>
+  <script src="./spark.js"></script>
+  <script src="./chart.js"></script>
+  <script src="./rv.js"></script>
+  <script src="./rv-data.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

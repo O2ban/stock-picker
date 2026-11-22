@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "name": "高昨比 · 百日均值>2%（波动活跃）",
+  "universe": {
+    "excludeSt": true
+  },
+  "limit": 500,
+  "vars": {
+    "prevClose": {
+      "op": "ref",
+      "n": 1,
+      "args": [
+        {
+          "op": "field",
+          "name": "close"
+        }
+      ]
+    },
+    "h2cPct": {
+      "op": "/",
+      "args": [
+        {
+          "op": "*",
+          "args": [
+            {
+              "op": "-",
+              "args": [
+                {
+                  "op": "field",
+                  "name": "high"
+                },
+                {
+                  "var": "prevClose"
+                }
+              ]
+            },
+            100
+          ]
+        },
+        {
+          "var": "prevClose"
+        }
+      ]
+    },
+    "avgH2c100": {
+      "op": "ma",
+      "n": 100,
+      "args": [
+        {
+          "var": "h2cPct"
+        }
+      ]
+    }
+  },
+  "all": [
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "近100日日均高昨比>2%（当日最高相对昨收涨幅）",
+        "expr": {
+          "op": ">",
+          "args": [
+            {
+              "var": "avgH2c100"
+            },
+            2
+          ]
+        }
+      }
+    }
+  ]
+}

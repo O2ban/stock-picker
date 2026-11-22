@@ -1,0 +1,666 @@
+{
+  "version": 1,
+  "name": "缩量低吸 · 涨跌修复形态",
+  "universe": {
+    "excludeSt": true
+  },
+  "limit": 100,
+  "vars": {
+    "ma5vol": {
+      "op": "ma",
+      "n": 5,
+      "args": [
+        {
+          "op": "field",
+          "name": "vol"
+        }
+      ]
+    },
+    "ma5close": {
+      "op": "ma",
+      "n": 5,
+      "args": [
+        {
+          "op": "field",
+          "name": "close"
+        }
+      ]
+    },
+    "ma20close": {
+      "op": "ma",
+      "n": 20,
+      "args": [
+        {
+          "op": "field",
+          "name": "close"
+        }
+      ]
+    },
+    "high60": {
+      "op": "hhv",
+      "n": 45,
+      "args": [
+        {
+          "op": "ref",
+          "n": 15,
+          "args": [
+            {
+              "op": "field",
+              "name": "close"
+            }
+          ]
+        }
+      ]
+    },
+    "low70": {
+      "op": "llv",
+      "n": 30,
+      "args": [
+        {
+          "op": "ref",
+          "n": 40,
+          "args": [
+            {
+              "op": "field",
+              "name": "close"
+            }
+          ]
+        }
+      ]
+    },
+    "cbLow": {
+      "op": "llv",
+      "n": 20,
+      "args": [
+        {
+          "op": "field",
+          "name": "low"
+        }
+      ]
+    },
+    "riseChg": {
+      "op": "/",
+      "args": [
+        {
+          "op": "-",
+          "args": [
+            {
+              "var": "high60"
+            },
+            {
+              "var": "low70"
+            }
+          ]
+        },
+        {
+          "var": "low70"
+        }
+      ]
+    },
+    "dropChg": {
+      "op": "/",
+      "args": [
+        {
+          "op": "-",
+          "args": [
+            {
+              "var": "high60"
+            },
+            {
+              "var": "cbLow"
+            }
+          ]
+        },
+        {
+          "var": "high60"
+        }
+      ]
+    },
+    "closeRef1": {
+      "op": "ref",
+      "n": 1,
+      "args": [
+        {
+          "op": "field",
+          "name": "close"
+        }
+      ]
+    },
+    "openRef1": {
+      "op": "ref",
+      "n": 1,
+      "args": [
+        {
+          "op": "field",
+          "name": "open"
+        }
+      ]
+    },
+    "volRef1": {
+      "op": "ref",
+      "n": 1,
+      "args": [
+        {
+          "op": "field",
+          "name": "vol"
+        }
+      ]
+    },
+    "ma5volRef1": {
+      "op": "ref",
+      "n": 1,
+      "args": [
+        {
+          "var": "ma5vol"
+        }
+      ]
+    },
+    "chgToday": {
+      "op": "/",
+      "args": [
+        {
+          "op": "-",
+          "args": [
+            {
+              "op": "field",
+              "name": "close"
+            },
+            {
+              "var": "closeRef1"
+            }
+          ]
+        },
+        {
+          "var": "closeRef1"
+        }
+      ]
+    }
+  },
+  "all": [
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块一·前期涨幅充分(15~60天前涨幅≥15%)",
+        "expr": {
+          "op": ">=",
+          "args": [
+            {
+              "var": "riseChg"
+            },
+            0.15
+          ]
+        }
+      }
+    },
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块一·上涨持续(站上起涨低点天数≥8)",
+        "expr": {
+          "op": ">=",
+          "args": [
+            {
+              "op": "count",
+              "n": 45,
+              "args": [
+                {
+                  "op": ">",
+                  "args": [
+                    {
+                      "op": "ref",
+                      "n": 15,
+                      "args": [
+                        {
+                          "op": "field",
+                          "name": "close"
+                        }
+                      ]
+                    },
+                    {
+                      "op": "*",
+                      "args": [
+                        {
+                          "var": "low70"
+                        },
+                        1.05
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            8
+          ]
+        }
+      }
+    },
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块二·回调充分(高点回落8%~40%)",
+        "expr": {
+          "op": "and",
+          "args": [
+            {
+              "op": ">=",
+              "args": [
+                {
+                  "var": "dropChg"
+                },
+                0.08
+              ]
+            },
+            {
+              "op": "<",
+              "args": [
+                {
+                  "var": "dropChg"
+                },
+                0.4
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块二·回调持续(近15天低于高点95%达5天)",
+        "expr": {
+          "op": ">=",
+          "args": [
+            {
+              "op": "count",
+              "n": 15,
+              "args": [
+                {
+                  "op": "<",
+                  "args": [
+                    {
+                      "var": "closeRef1"
+                    },
+                    {
+                      "op": "*",
+                      "args": [
+                        {
+                          "var": "high60"
+                        },
+                        0.95
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            5
+          ]
+        }
+      }
+    },
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块三·现价贴近MA20(±7%以内)",
+        "expr": {
+          "op": "and",
+          "args": [
+            {
+              "op": ">",
+              "args": [
+                {
+                  "op": "field",
+                  "name": "close"
+                },
+                {
+                  "op": "*",
+                  "args": [
+                    {
+                      "var": "ma20close"
+                    },
+                    0.93
+                  ]
+                }
+              ]
+            },
+            {
+              "op": "<",
+              "args": [
+                {
+                  "op": "field",
+                  "name": "close"
+                },
+                {
+                  "op": "*",
+                  "args": [
+                    {
+                      "var": "ma20close"
+                    },
+                    1.07
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块四·前期缩量(前6天有4天量低于MA5量)",
+        "expr": {
+          "op": ">=",
+          "args": [
+            {
+              "op": "count",
+              "n": 6,
+              "args": [
+                {
+                  "op": "<",
+                  "args": [
+                    {
+                      "var": "volRef1"
+                    },
+                    {
+                      "var": "ma5volRef1"
+                    }
+                  ]
+                }
+              ]
+            },
+            4
+          ]
+        }
+      }
+    },
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块四·量不死寂(前6天量均高于MA5量30%)",
+        "expr": {
+          "op": "every",
+          "n": 6,
+          "args": [
+            {
+              "op": ">",
+              "args": [
+                {
+                  "var": "volRef1"
+                },
+                {
+                  "op": "*",
+                  "args": [
+                    {
+                      "var": "ma5volRef1"
+                    },
+                    0.3
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块四·量能收缩(近3日量均<前3日量均)",
+        "expr": {
+          "op": "<",
+          "args": [
+            {
+              "op": "ma",
+              "n": 3,
+              "args": [
+                {
+                  "var": "volRef1"
+                }
+              ]
+            },
+            {
+              "op": "ma",
+              "n": 3,
+              "args": [
+                {
+                  "op": "ref",
+                  "n": 4,
+                  "args": [
+                    {
+                      "op": "field",
+                      "name": "vol"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块五·今日刚突破均量(昨量低于MA5量)",
+        "expr": {
+          "op": "and",
+          "args": [
+            {
+              "op": ">",
+              "args": [
+                {
+                  "op": "field",
+                  "name": "vol"
+                },
+                {
+                  "var": "ma5vol"
+                }
+              ]
+            },
+            {
+              "op": "<",
+              "args": [
+                {
+                  "var": "volRef1"
+                },
+                {
+                  "var": "ma5volRef1"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块五·突破温和(今日量<1.8倍MA5量)",
+        "expr": {
+          "op": "<",
+          "args": [
+            {
+              "op": "field",
+              "name": "vol"
+            },
+            {
+              "op": "*",
+              "args": [
+                {
+                  "var": "ma5vol"
+                },
+                1.8
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块五·量与均量接近(量比1.0~1.5)",
+        "expr": {
+          "op": "and",
+          "args": [
+            {
+              "op": ">=",
+              "args": [
+                {
+                  "op": "/",
+                  "args": [
+                    {
+                      "op": "field",
+                      "name": "vol"
+                    },
+                    {
+                      "var": "ma5vol"
+                    }
+                  ]
+                },
+                1
+              ]
+            },
+            {
+              "op": "<=",
+              "args": [
+                {
+                  "op": "/",
+                  "args": [
+                    {
+                      "op": "field",
+                      "name": "vol"
+                    },
+                    {
+                      "var": "ma5vol"
+                    }
+                  ]
+                },
+                1.5
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块六·今日收阳",
+        "expr": {
+          "op": ">=",
+          "args": [
+            {
+              "op": "field",
+              "name": "close"
+            },
+            {
+              "op": "field",
+              "name": "open"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块六·站上MA5价",
+        "expr": {
+          "op": ">",
+          "args": [
+            {
+              "op": "field",
+              "name": "close"
+            },
+            {
+              "var": "ma5close"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块六·涨幅温和(0<今日涨幅<6%)",
+        "expr": {
+          "op": "and",
+          "args": [
+            {
+              "op": "<",
+              "args": [
+                {
+                  "var": "chgToday"
+                },
+                0.06
+              ]
+            },
+            {
+              "op": ">",
+              "args": [
+                {
+                  "var": "chgToday"
+                },
+                0
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块六·整理无大阴(前6天无4%以上阴线)",
+        "expr": {
+          "op": "every",
+          "n": 6,
+          "args": [
+            {
+              "op": "<",
+              "args": [
+                {
+                  "op": "/",
+                  "args": [
+                    {
+                      "op": "-",
+                      "args": [
+                        {
+                          "var": "openRef1"
+                        },
+                        {
+                          "var": "closeRef1"
+                        }
+                      ]
+                    },
+                    {
+                      "var": "openRef1"
+                    }
+                  ]
+                },
+                0.04
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+node_modules/
+.env
+*.db
+*.db-shm
+*.db-wal
+.DS_Store
+__pycache__/
+*.pyc
+
+# K线数据目录（体积大，不纳入版本控制）
+data/min5/
+data/min5_pool/
+data/intraday-min/
+scripts/intraday-backtest/min5/
+scripts/intraday-backtest/.venv/
+public/bt-view/*.json
+
+# 日志与运行时文件
+*.log
+*.pid
+
+# 备份目录
+backup*/
+
+# 编辑器配置
+.vscode/
+.idea/

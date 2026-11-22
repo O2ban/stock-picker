@@ -1,0 +1,143 @@
+/* 301557 分时复盘页 —— 独立于看盘页，不改动既有图表与策略样式 */
+.ev-body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:14px;line-height:1.4;
+  -webkit-tap-highlight-color:transparent;
+}
+.ev-frame{
+  position:fixed;inset:0;display:flex;flex-direction:column;min-height:0;
+  padding-top:var(--safe-t);
+}
+.ev-top{
+  flex:0 0 auto;display:flex;align-items:center;gap:8px;
+  padding:10px 12px;border-bottom:1px solid var(--line-soft);background:var(--bg-elev);
+}
+.ev-back{
+  width:30px;height:30px;flex:0 0 auto;border:1px solid var(--line);background:#131a16;
+  border-radius:6px;color:var(--ink-2);font-size:20px;line-height:1;cursor:pointer;
+}
+.ev-back:hover{border-color:var(--green-bright);color:var(--green-bright);}
+.ev-top-t{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.ev-top-t strong{font-size:15px;}
+.ev-top-t span{font-size:11px;color:var(--muted);}
+
+.ev-nav{
+  flex:0 0 auto;display:flex;align-items:center;gap:8px;
+  padding:8px 12px;border-bottom:1px solid var(--line-soft);
+}
+.ev-btn{
+  flex:0 0 auto;border:1px solid var(--line);background:#131a16;color:var(--ink-2);
+  border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;font-family:inherit;
+}
+.ev-btn:hover:not(:disabled){border-color:var(--green-bright);color:var(--green-bright);}
+.ev-btn:disabled{opacity:.4;cursor:default;}
+.ev-pos{flex:1 1 auto;text-align:center;font-size:12px;color:var(--ink-2);font-variant-numeric:tabular-nums;}
+
+.ev-scroll{
+  flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:10px 12px calc(var(--safe-b) + 20px);
+}
+
+/* ---------- 本笔概要 ---------- */
+.ev-head{
+  border:1px solid var(--line);background:var(--bg-elev);border-radius:10px;
+  padding:10px 12px;font-size:12px;line-height:1.75;color:var(--ink-2);
+}
+.ev-head b{color:var(--ink);font-weight:700;}
+.ev-head .up{color:var(--up);}
+.ev-head .down{color:var(--down);}
+.ev-head .r1{font-size:13px;color:var(--ink);margin-bottom:4px;}
+.ev-head .tag{
+  display:inline-block;margin-left:6px;padding:1px 6px;border-radius:4px;
+  font-size:10px;vertical-align:1px;
+}
+.ev-head .tag.turn{background:#14251c;color:#3fd68b;border:1px solid #1f6b45;}
+.ev-head .tag.skip{background:#251518;color:#ff5a76;border:1px solid #5e2a33;}
+.ev-head .warn{color:#e8a33d;}
+
+/* ---------- 分时图 ---------- */
+.ev-chartwrap{margin-top:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg-elev);overflow:hidden;}
+.ev-chart-t{
+  padding:7px 12px;font-size:12px;color:var(--ink-2);border-bottom:1px solid var(--line-soft);
+  display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 8px;
+}
+.ev-chart-t em{font-style:normal;color:var(--muted);font-size:11px;flex:1 1 100%;min-width:0;}
+.ev-chart{width:100%;height:240px;}
+
+.ev-legend{
+  display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--muted);
+  margin-top:8px;line-height:1.8;align-items:center;
+}
+.ev-legend .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:0;}
+.ev-legend .dot.buy{background:#3fd68b;}
+.ev-legend .dot.sell{background:#ff5a76;}
+.ev-legend .dot.hit{background:#e8a33d;}
+.ev-legend .ln{display:inline-block;width:14px;height:0;border-top:1px dashed #4a5b56;margin-right:5px;vertical-align:3px;}
+.ev-legend .ln.thr{border-top-color:#6a5a2a;}
+.ev-legend .ln.hi{border-top-color:#78aaff;}
+
+/* 规则说明 */
+.ev-rule{
+  margin:8px 0 0;font-size:11px;line-height:1.75;color:var(--muted);
+  border:1px solid var(--line-soft);border-radius:8px;padding:8px 10px;background:rgba(255,255,255,.02);
+}
+.ev-rule b{color:var(--ink-2);font-weight:600;}
+.ev-sec{margin:14px 0 -4px;font-size:11px;color:var(--muted);letter-spacing:.02em;}
+
+/* ---------- 统计 ---------- */
+.ev-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:14px;}
+@media (min-width:720px){.ev-stats{grid-template-columns:repeat(6,1fr);gap:8px;}}
+.ev-card{background:var(--bg-elev);border:1px solid var(--line);border-radius:8px;padding:7px 9px;}
+.ev-card .k{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ev-card .v{font-size:15px;font-weight:700;margin-top:3px;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.ev-card .v.pos{color:#f0556b;}
+.ev-card .v.neg{color:#25c088;}
+
+.ev-groups,.ev-buckets,.ev-kinds,.ev-gates{
+  margin-top:12px;border:1px solid var(--line);border-radius:10px;overflow-x:auto;background:var(--bg-elev);
+}
+.ev-groups table,.ev-buckets table,.ev-kinds table,.ev-gates table{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums;}
+.ev-groups th,.ev-buckets th,.ev-kinds th,.ev-gates th{
+  background:var(--bg-elev2);color:var(--muted);font-weight:600;padding:7px 8px;text-align:right;
+  border-bottom:1px solid var(--line);white-space:nowrap;
+}
+.ev-groups th:first-child,.ev-groups td:first-child,
+.ev-buckets th:first-child,.ev-buckets td:first-child,
+.ev-kinds th:first-child,.ev-kinds td:first-child,
+.ev-gates th:first-child,.ev-gates td:first-child{text-align:left;}
+.ev-groups td,.ev-buckets td,.ev-kinds td,.ev-gates td{
+  padding:7px 8px;text-align:right;border-bottom:1px solid var(--line-soft);color:var(--ink-2);white-space:nowrap;
+}
+.ev-groups .pos,.ev-buckets .pos,.ev-kinds .pos,.ev-gates .pos{color:#f0556b;}
+.ev-groups .neg,.ev-buckets .neg,.ev-kinds .neg,.ev-gates .neg{color:#25c088;}
+
+/* ---------- 明细表 ---------- */
+.ev-tblwrap{margin-top:14px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg-elev);}
+.ev-tblhd{
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+  padding:8px 12px;font-size:12px;color:var(--ink);border-bottom:1px solid var(--line);background:var(--bg-elev2);
+}
+.ev-tblhd span:last-child{font-size:11px;color:var(--muted);}
+.ev-tbl{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums;}
+.ev-tbl th{
+  background:var(--bg-elev2);color:var(--muted);font-weight:600;padding:6px 6px;
+  border-bottom:1px solid var(--line);white-space:nowrap;text-align:right;font-size:11px;
+}
+.ev-tbl th:first-child,.ev-tbl td:first-child{text-align:left;padding-left:10px;}
+.ev-tbl td{padding:6px;text-align:right;border-bottom:1px solid var(--line-soft);color:var(--ink-2);white-space:nowrap;}
+.ev-tbl tbody tr{cursor:pointer;}
+.ev-tbl tbody tr:hover{background:var(--bg-elev2);}
+.ev-tbl tbody tr.on{background:var(--pale);}
+.ev-tbl td.pos{color:#f0556b;}
+.ev-tbl td.neg{color:#25c088;}
+.ev-tbl tbody tr.skip{background:rgba(255,90,118,.045);}
+.ev-tbl tbody tr.skip td{color:#8a9591;}
+.ev-tbl td.st{font-size:11px;}
+.ev-tbl .ok{color:#3fd68b;}
+.ev-tbl .no{color:#ff8a9c;}
+.ev-foot{margin-top:12px;font-size:11px;line-height:1.7;color:var(--muted);}
+
+/* ---------- 应用内嵌模式（放在 #ev-page 抽屉里，与独立页共用同一套结构） ---------- */
+/* 抽屉本身已经是 fixed 全屏，内部的 frame 不能再 fixed，否则安全区与高度会打架 */
+.ev-page .ev-frame{position:static;flex:1 1 auto;min-height:0;padding-top:0;}

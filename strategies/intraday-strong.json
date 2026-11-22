@@ -1,0 +1,151 @@
+{
+  "version": 1,
+  "name": "日内强势控盘",
+  "universe": {
+    "excludeSt": true
+  },
+  "intraday": {
+    "window": {
+      "from": "0935",
+      "to": "1000"
+    },
+    "gap": {
+      "min": -2,
+      "max": 1.5
+    },
+    "gain": {
+      "min": 0,
+      "max": 2
+    },
+    "maxPrevGain": {
+      "enabled": true,
+      "minPct": 1,
+      "maxPct": 2
+    },
+    "prevDay": {
+      "enabled": false,
+      "min": -5,
+      "max": 5
+    },
+    "mid": {
+      "requireAboveWater": false,
+      "requireAboveMid": true,
+      "nearPct": 0.8
+    },
+    "vol": {
+      "shrinkRatio": 0.3,
+      "shrinkBurst": 3,
+      "rebound": 2.2,
+      "pileMin": 3,
+      "prePileMin": 3,
+      "isolatedRatio": 2,
+      "upMin": 2,
+      "upMax": 8,
+      "upPct": 0.2,
+      "dropPct": 0.25,
+      "look": 20
+    },
+    "shape": {
+      "enabled": true,
+      "look": 6,
+      "maxFlips": 2
+    },
+    "deepDrop": {
+      "enabled": true,
+      "maxPct": 3
+    },
+    "breakHigh": {
+      "enabled": true
+    },
+    "fromLow": {
+      "enabled": true,
+      "maxPct": 2.5
+    },
+    "excludeLimitUp": false,
+    "entry": {
+      "waitBars": 4,
+      "requireRising": true
+    }
+  },
+  "all": [
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块①·开盘幅度：低开不超过 2 个点，高开不超过 1.5 个点"
+      }
+    },
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块②·出手时间窗：9:35 之后，到 10:00 左右"
+      }
+    },
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块③·位置：出手时价格必须站在水面（昨收）之上，也必须站在「中」（降中线）之上"
+      }
+    },
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块④·出手前当天最高涨幅要在 1%~3% 之间：没涨过 1% 的说明一直在平盘磨蹭、突破是假的，不做；涨过 3% 的说明冲得太猛、上面空间被吃掉，也不追"
+      }
+    },
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块⑤·形态：走 N 型或 W 型，最近 6 分钟方向翻转不超过 2 次，反复抽搐的不做"
+      }
+    },
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块⑥·量能成堆：先放量一堆 → 缩到前堆 3 成以下且小 3 倍以上 → 再放量上拉一堆（量回到缩量堆 2.2 倍以上），孤量不做"
+      }
+    },
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块⑦·出手不硬卡特征那一根：特征出现后允许再等最多 4 根（约 20 分钟内的短窗口），等价格正在上涨、且站上水面和降中线时再买"
+      }
+    },
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块⑧·出手前最深跌到水下不超过 3 个点：出手前曾跌破 3 个点的不做，没跌破的仍可考虑"
+      }
+    },
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块⑨·买点必须冲过买之前那一刻的分时最高点：只买突破前高的位置，不买在半山腰"
+      }
+    },
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块⑩·买点距离当日最低点不超过 2.5 个点：已经跑出去太远的票，上面没多少空间了，不追"
+      }
+    },
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块⑪·出手那一刻涨幅不超过 2 个点：不追高，宁可少买也不买在冲高回落的头上"
+      }
+    }
+  ],
+  "limit": 20000,
+  "note": "买点：早盘 9:35~10:00 之间触发时买入（按触发那一分钟的收盘价），卖出按次日开盘价成交。"
+}

@@ -1,0 +1,268 @@
+{
+  "date": "2026-11-20",
+  "updatedAt": "2026-11-20T02:00:05.819Z",
+  "strategyId": "intraday-strong",
+  "runs": [
+    {
+      "at": "2026-11-20T01:35:05.729Z",
+      "hhmm": "0935",
+      "count": 0,
+      "scanned": 5373,
+      "passed": 0,
+      "baseDate": "2026-11-20",
+      "elapsedMs": 2958,
+      "added": 0
+    },
+    {
+      "at": "2026-11-20T01:36:05.717Z",
+      "hhmm": "0936",
+      "count": 0,
+      "scanned": 5373,
+      "passed": 0,
+      "baseDate": "2026-11-20",
+      "elapsedMs": 2992,
+      "added": 0
+    },
+    {
+      "at": "2026-11-20T01:37:05.932Z",
+      "hhmm": "0937",
+      "count": 0,
+      "scanned": 5373,
+      "passed": 0,
+      "baseDate": "2026-11-20",
+      "elapsedMs": 3196,
+      "added": 0
+    },
+    {
+      "at": "2026-11-20T01:38:06.005Z",
+      "hhmm": "0938",
+      "count": 0,
+      "scanned": 5373,
+      "passed": 0,
+      "baseDate": "2026-11-20",
+      "elapsedMs": 3258,
+      "added": 0
+    },
+    {
+      "at": "2026-11-20T01:39:05.999Z",
+      "hhmm": "0939",
+      "count": 0,
+      "scanned": 5373,
+      "passed": 0,
+      "baseDate": "2026-11-20",
+      "elapsedMs": 3258,
+      "added": 0
+    },
+    {
+      "at": "2026-11-20T01:40:05.670Z",
+      "hhmm": "0940",
+      "count": 0,
+      "scanned": 5373,
+      "passed": 0,
+      "baseDate": "2026-11-20",
+      "elapsedMs": 2924,
+      "added": 0
+    },
+    {
+      "at": "2026-11-20T01:41:06.030Z",
+      "hhmm": "0941",
+      "count": 0,
+      "scanned": 5373,
+      "passed": 0,
+      "baseDate": "2026-11-20",
+      "elapsedMs": 3271,
+      "added": 0
+    },
+    {
+      "at": "2026-11-20T01:42:05.686Z",
+      "hhmm": "0942",
+      "count": 0,
+      "scanned": 5373,
+      "passed": 0,
+      "baseDate": "2026-11-20",
+      "elapsedMs": 2921,
+      "added": 0
+    },
+    {
+      "at": "2026-11-20T01:43:05.701Z",
+      "hhmm": "0943",
+      "count": 0,
+      "scanned": 5373,
+      "passed": 0,
+      "baseDate": "2026-11-20",
+      "elapsedMs": 2927,
+      "added": 0
+    },
+    {
+      "at": "2026-11-20T01:44:05.646Z",
+      "hhmm": "0944",
+      "count": 0,
+      "scanned": 5373,
+      "passed": 0,
+      "baseDate": "2026-11-20",
+      "elapsedMs": 2865,
+      "added": 0
+    },
+    {
+      "at": "2026-11-20T01:45:05.700Z",
+      "hhmm": "0945",
+      "count": 0,
+      "scanned": 5373,
+      "passed": 0,
+      "baseDate": "2026-11-20",
+      "elapsedMs": 2911,
+      "added": 0
+    },
+    {
+      "at": "2026-11-20T01:46:05.790Z",
+      "hhmm": "0946",
+      "count": 0,
+      "scanned": 5373,
+      "passed": 0,
+      "baseDate": "2026-11-20",
+      "elapsedMs": 2994,
+      "added": 0
+    },
+    {
+      "at": "2026-11-20T01:47:06.654Z",
+      "hhmm": "0947",
+      "count": 0,
+      "scanned": 5373,
+      "passed": 0,
+      "baseDate": "2026-11-20",
+      "elapsedMs": 3849,
+      "added": 0
+    },
+    {
+      "at": "2026-11-20T01:48:05.972Z",
+      "hhmm": "0948",
+      "count": 0,
+      "scanned": 5373,
+      "passed": 0,
+      "baseDate": "2026-11-20",
+      "elapsedMs": 3159,
+      "added": 0
+    },
+    {
+      "at": "2026-11-20T01:49:05.772Z",
+      "hhmm": "0949",
+      "count": 0,
+      "scanned": 5373,
+      "passed": 0,
+      "baseDate": "2026-11-20",
+      "elapsedMs": 2952,
+      "added": 0
+    },
+    {
+      "at": "2026-11-20T01:50:06.367Z",
+      "hhmm": "0950",
+      "count": 0,
+      "scanned": 5373,
+      "passed": 0,
+      "baseDate": "2026-11-20",
+      "elapsedMs": 3541,
+      "added": 0
+    },
+    {
+      "at": "2026-11-20T01:51:05.756Z",
+      "hhmm": "0951",
+      "count": 0,
+      "scanned": 5373,
+      "passed": 0,
+      "baseDate": "2026-11-20",
+      "elapsedMs": 2923,
+      "added": 0
+    },
+    {
+      "at": "2026-11-20T01:52:05.779Z",
+      "hhmm": "0952",
+      "count": 0,
+      "scanned": 5373,
+      "passed": 0,
+      "baseDate": "2026-11-20",
+      "elapsedMs": 2936,
+      "added": 0
+    },
+    {
+      "at": "2026-11-20T01:53:05.781Z",
+      "hhmm": "0953",
+      "count": 0,
+      "scanned": 5373,
+      "passed": 0,
+      "baseDate": "2026-11-20",
+      "elapsedMs": 2929,
+      "added": 0
+    },
+    {
+      "at": "2026-11-20T01:54:05.905Z",
+      "hhmm": "0954",
+      "count": 0,
+      "scanned": 5373,
+      "passed": 0,
+      "baseDate": "2026-11-20",
+      "elapsedMs": 3051,
+      "added": 0
+    },
+    {
+      "at": "2026-11-20T01:55:05.510Z",
+      "hhmm": "0955",
+      "count": 0,
+      "scanned": 5373,
+      "passed": 0,
+      "baseDate": "2026-11-20",
+      "elapsedMs": 2649,
+      "added": 0
+    },
+    {
+      "at": "2026-11-20T01:56:05.652Z",
+      "hhmm": "0956",
+      "count": 0,
+      "scanned": 5373,
+      "passed": 0,
+      "baseDate": "2026-11-20",
+      "elapsedMs": 2783,
+      "added": 0
+    },
+    {
+      "at": "2026-11-20T01:57:05.849Z",
+      "hhmm": "0957",
+      "count": 0,
+      "scanned": 5373,
+      "passed": 0,
+      "baseDate": "2026-11-20",
+      "elapsedMs": 2967,
+      "added": 0
+    },
+    {
+      "at": "2026-11-20T01:58:05.818Z",
+      "hhmm": "0958",
+      "count": 0,
+      "scanned": 5373,
+      "passed": 0,
+      "baseDate": "2026-11-20",
+      "elapsedMs": 2928,
+      "added": 0
+    },
+    {
+      "at": "2026-11-20T01:59:05.776Z",
+      "hhmm": "0959",
+      "count": 0,
+      "scanned": 5373,
+      "passed": 0,
+      "baseDate": "2026-11-20",
+      "elapsedMs": 2876,
+      "added": 0
+    },
+    {
+      "at": "2026-11-20T02:00:05.819Z",
+      "hhmm": "1000",
+      "count": 0,
+      "scanned": 5373,
+      "passed": 0,
+      "baseDate": "2026-11-20",
+      "elapsedMs": 2916,
+      "added": 0
+    }
+  ],
+  "picks": []
+}

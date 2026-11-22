@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>回测复盘 · 日内低吸</title>
+<link rel="stylesheet" href="./styles.css">
+<link rel="stylesheet" href="./bt-review.css">
+</head>
+<body>
+<div class="app-frame">
+  <header class="app-top">
+    <div class="app-title">回测复盘 · 日内低吸</div>
+    <a class="rv-back" href="./index.html#review">‹ 返回选股</a>
+  </header>
+
+  <div class="rv-body">
+    <div class="rv-ctl">
+      <label>股票<select id="s-stock"></select></label>
+      <label>买入深度<select id="s-k"></select></label>
+      <label>卖出方式<select id="s-mode"></select></label>
+      <label>视野<select id="s-span">
+        <option value="120">近半年</option>
+        <option value="250" selected>近一年</option>
+        <option value="500">近两年</option>
+        <option value="0">全程</option>
+      </select></label>
+    </div>
+
+    <div class="rv-note">
+      口径：前一日收盘价在 5 日均线之上才允许交易；当日最低价跌到「前收 − 深度 × 60日平均振幅」即按该价买入；次日卖出。
+      <b>买卖点按真实日 K 画在图上</b>，绿色三角为买入，橙色方块为卖出。
+    </div>
+
+    <div class="rv-stats" id="rv-stats"></div>
+    <div id="rv-chart"></div>
+    <div class="rv-legend">
+      <span><i style="background:#f03b52"></i>阳线</span>
+      <span><i style="background:#12b886"></i>阴线</span>
+      <span><i style="background:#4a9eff"></i>5日均线</span>
+      <span><i style="background:#38d39f"></i>买入点</span>
+      <span><i style="background:#ffa726"></i>卖出点</span>
+      <span>左右拖动平移，上下滑动缩放，双指缩放；点明细行定位</span>
+    </div>
+
+    <div class="rv-tbl">
+      <div class="rv-tbl-hd"><span>当前视野成交明细 <b id="rv-cnt">0</b> 笔</span><span>点一行可定位到那根 K 线</span></div>
+      <table>
+        <thead><tr><th>买入日</th><th>卖出日</th><th>买入价</th><th>卖出价</th><th>收益</th><th>扣费后</th></tr></thead>
+        <tbody id="rv-rows"></tbody>
+      </table>
+      <div class="rv-empty" id="rv-empty" hidden>当前视野没有成交</div>
+    </div>
+  </div>
+</div>
+<script src="./vendor/echarts.min.js"></script>
+<script src="./bt-review.js"></script>
+</body>
+</html>

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>301557 常友科技 · 一分钟口径回测证据</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0f1115;color:#d7dce5;font:14px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 18px 80px}
+h1{font-size:20px;margin:0 0 4px;color:#fff}
+h2{font-size:15px;margin:34px 0 12px;color:#fff;border-left:3px solid #3b82f6;padding-left:10px}
+.meta{color:#7d8797;font-size:12.5px;margin-bottom:20px}
+.note{background:#181c24;border:1px solid #262c38;border-radius:8px;padding:12px 14px;font-size:13px;color:#9aa5b6;margin:12px 0}
+.note b{color:#e5e9f0}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:14px 0}
+.card{background:#171b23;border:1px solid #262c38;border-radius:8px;padding:12px 14px}
+.card .k{font-size:12px;color:#7d8797}
+.card .v{font-size:20px;font-weight:600;margin-top:4px;font-variant-numeric:tabular-nums}
+.pos{color:#f0556b}.neg{color:#25c088}.neu{color:#d7dce5}
+table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+th,td{padding:7px 9px;text-align:right;border-bottom:1px solid #1f242e;white-space:nowrap}
+th{background:#1a1f28;color:#93a0b3;font-weight:500;cursor:pointer;user-select:none;position:sticky;top:0;z-index:2}
+th:hover{color:#fff}
+td.l,th.l{text-align:left}
+tbody tr:hover{background:#1a1f28}
+tr.grp td{background:#12161d;color:#7d8797;font-weight:600;text-align:left}
+.tag{display:inline-block;padding:1px 7px;border-radius:4px;font-size:11.5px}
+.t-turn{background:#123a2c;color:#25c088}
+.t-close{background:#3a1520;color:#f0556b}
+.scroll{max-height:620px;overflow:auto;border:1px solid #262c38;border-radius:8px}
+.bar{height:5px;border-radius:3px;background:#2a3140;position:relative;width:90px;display:inline-block;vertical-align:middle}
+.bar i{position:absolute;left:50%;top:0;bottom:0;background:#3b82f6}
+.sub{font-size:12px;color:#7d8797;margin-top:6px}
+.ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
+.ctrl button{background:#1d2430;border:1px solid #2c3542;color:#9aa5b6;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12.5px}
+.ctrl button.on{background:#1e3a8a;border-color:#3b82f6;color:#fff}
+.ctrl input{background:#1d2430;border:1px solid #2c3542;color:#d7dce5;padding:5px 10px;border-radius:6px;width:120px;font-size:12.5px}
+details{margin-top:10px}
+summary{cursor:pointer;color:#6ea8fe;font-size:13px}
+pre{background:#12161d;border:1px solid #212834;border-radius:6px;padding:10px;overflow:auto;font-size:12px;color:#9aa5b6;max-height:320px}
+.mini{font-size:12px;color:#7d8797}
+.hl{background:#1e3a8a33;color:#fff}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>301557 常友科技 · 一分钟分时口径回测</h1>
+<div class="meta" id="meta"></div>
+
+<div class="note">
+<b>规则原文</b>：T 日收盘买入（买入价 = T 日收盘价）；T+1 日首次出现分钟价 ≥ 昨收 × 1.01 后，<b>从下一分钟起</b>第一次出现「该分钟价低于前一分钟价」即以该分钟价卖出；若整日未触及 +1%，按 15:00 收盘价卖出。双边成本 0.26%。<br>
+<b>数据</b>：eltdx 通达信协议逐日拉取每交易日完整 240 根原始分钟价，未做任何抽样、未用分钟开盘/最高/均价近似成交。全部原始数据可点开每行核对。
+</div>
+
+<h2>一、总体结果</h2>
+<div class="cards" id="cards"></div>
+<div id="baseline"></div>
+
+<h2>二、分组拆解 —— 亏损究竟在哪</h2>
+<div id="groups"></div>
+<div class="note">均值与中位数严重背离的原因：赚的那组是小赚，亏的那组是大亏，一次 -10% 要十几笔 +0.9% 才能填回。</div>
+
+<h2>三、按「买入日高昨比」分档</h2>
+<div id="buckets"></div>
+<div class="note">高昨比 =（当日最高价 ÷ 前一日收盘价 − 1）× 100。买入日收盘时该值已知，无未来函数。注意形态是<b>两头差、中间好</b>，不是越高越好。</div>
+
+<h2>四、逐笔明细（点任意一行展开该日全部分钟价）</h2>
+<div class="ctrl">
+  <button id="f-all" class="on">全部 100 笔</button>
+  <button id="f-keep">仅高昨比≥1%</button>
+  <button id="f-drop">仅被剔除（&lt;1%）</button>
+  <button id="f-turn">仅触及后卖出</button>
+  <button id="f-close">仅未触及收盘卖</button>
+  <span class="mini">点击表头可排序</span>
+</div>
+<div id="live" class="note" style="margin:8px 0"></div>
+<div class="scroll"><table id="tbl"><thead><tr>
+<th class="l" data-k="n">#</th>
+<th class="l" data-k="T">买入日</th>
+<th class="l" data-k="T1">卖出日</th>
+<th data-k="buy">买入价</th>
+<th data-k="thr">+1%触发价</th>
+<th class="l" data-k="hit_t">触及时间</th>
+<th data-k="sell">卖出价</th>
+<th class="l" data-k="et">卖出时间</th>
+<th class="l" data-k="kind">出场方式</th>
+<th data-k="gross">毛收益</th>
+<th data-k="net">净收益</th>
+<th data-k="hpr">高昨比</th>
+</tr></thead><tbody></tbody></table></div>
+
+<h2>五、原始数据核对</h2>
+<details>
+<summary>点开查看原始行情快照与生成方式（可复现）</summary>
+<pre id="rawinfo"></pre>
+</details>
+
+</div>
+<script>
+const FEE=0.26;
+let DATA=null, TRADES=[], FILTER='all', SORT={k:'n',asc:true};
+const fmt=(x,d=2)=>x==null?'—':(x>=0?'+':'')+x.toFixed(d)+'%';
+const cls=x=>x>0?'pos':(x<0?'neg':'neu');
+const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
+const med=a=>{const b=[...a].sort((x,y)=>x-y),m=b.length>>1;return b.length%2?b[m]:(b[m-1]+b[m])/2};
+const cum=a=>a.reduce((x,y)=>x*(1+y/100),1)*100-100;
+const stdev=a=>{const m=mean(a);return Math.sqrt(a.reduce((s,x)=>s+(x-m)**2,0)/(a.length-1))};
+
+function stats(list){
+  const n=list.map(t=>t.net);
+  return {n:n.length,mean:mean(n),med:med(n),win:100*n.filter(x=>x>0).length/n.length,cum:cum(n),sd:stdev(n)};
+}
+function card(k,v,c){return `<div class="card"><div class="k">${k}</div><div class="v ${c}">${v}</div></div>`}
+
+fetch('data.json').then(r=>r.json()).then(d=>{
+  DATA=d; TRADES=d.trades;
+  document.getElementById('meta').textContent =
+    `标的 ${d.code} · ${TRADES[0].T} ~ ${TRADES[TRADES.length-1].T1} 共 ${TRADES.length} 笔 · 双边成本 ${d.fee}% · 数据源 eltdx 通达信历史分钟接口`;
+
+  // 卡片
+  const all=stats(TRADES);
+  document.getElementById('cards').innerHTML =
+    card('总笔数', all.n+' 笔','neu')+
+    card('平均每笔净收益', fmt(all.mean),cls(all.mean))+
+    card('中位每笔净收益', fmt(all.med),cls(all.med))+
+    card('胜率', all.win.toFixed(1)+'%','neu')+
+    card('累计净收益', fmt(all.cum),cls(all.cum));
+
+  // 基线（直接从 trades 里的开/收盘价算，不复用结论）
+  const A=TRADES.map(t=>(t.close/t.buy-1)*100-FEE);
+  const B=TRADES.map(t=>(t.open/t.buy-1)*100-FEE);
+  const rows=[
+    ['本策略（用户规则）',all],
+    ['基线A：次日收盘卖',stats2(A)],
+    ['基线B：次日开盘卖',stats2(B)],
+  ];
+  document.getElementById('baseline').innerHTML=table(rows,['方案','笔数','均值','中位','胜率','累计']);
+
+  // 分组
+  const turn=stats(TRADES.filter(t=>t.kind==='TURN'));
+  const clo=stats(TRADES.filter(t=>t.kind!=='TURN'));
+  document.getElementById('groups').innerHTML=table([
+    ['触及 +1% 后拐头卖出',turn],['全天未触及 → 15:00 收盘卖',clo]
+  ],['分组','笔数','均值','中位','胜率','累计']);
+
+  // 分档
+  const bk=[[-99,1],[1,2],[2,3],[3,4],[4,6],[6,99]];
+  const brows=bk.map(([lo,hi])=>{
+    const g=TRADES.filter(t=>t.hpr!=null&&t.hpr>=lo&&t.hpr<hi);
+    if(!g.length) return null;
+    const s=stats(g); const hit=100*g.filter(t=>t.kind==='TURN').length/g.length;
+    return [`${lo<0?'低于 1%':(hi>90?'≥ 6% 以上':'≥ '+lo+'% ~ '+hi+'%')}`,s,hit];
+  }).filter(Boolean);
+  let h='<table><thead><tr><th class="l">买入日高昨比</th><th>笔数</th><th>次日触及+1%比例</th><th>均值</th><th>中位</th><th>胜率</th><th>累计</th><th class="l">分布</th></tr></thead><tbody>';
+  brows.forEach(([nm,s,hit])=>{
+    h+=`<tr><td class="l">${nm}</td><td>${s.n}</td><td>${hit.toFixed(0)}%</td>
+    <td class="${cls(s.mean)}">${fmt(s.mean)}</td><td class="${cls(s.med)}">${fmt(s.med)}</td>
+    <td>${s.win.toFixed(1)}%</td><td class="${cls(s.cum)}">${fmt(s.cum)}</td>
+    <td class="l">${bar(s.mean)}</td></tr>`;
+  });
+  h+='</tbody></table>';
+  document.getElementById('buckets').innerHTML=h;
+
+  // 过滤按钮统计也贴上
+  document.getElementById('rawinfo').textContent =
+`数据文件：raw.json（101 个交易日的原始分钟价，每天 240 根，来自 eltdx minutes.history）
+字段：date / open_raw / high_raw / low_raw / close_raw（日线，未复权，期间无除权，raw=qfq）
+分钟价：原始 price 字段，未做任何换算
+
+计算过程（可逐行复核）：
+1. 买入价 buy = T 日 close_raw
+2. 昨收 p0 = T+1 日分钟数据自带的 prev_close（已校验与 T 日 close_raw 一致）
+3. 触发价 thr = round(p0 * 1.01, 4)
+4. 从 09:31 起逐分钟比较：第一个 price >= thr 的位置记为 hit
+5. 从 hit+1 分钟开始，找到第一个 price[k] < price[k-1] 的位置，卖出价 = price[k]
+6. 若全天没有 price >= thr，卖出价 = 15:00 那根的 price
+7. 毛收益 = (卖出价/买入价 - 1) * 100
+8. 净收益 = 毛收益 - ${FEE}
+
+本页所有统计数字都是浏览器用上面 100 笔明细现场算出来的，不是预先写死的。
+你可以在明细表里任选几笔，对着 raw.json 的分钟价自己验算。`;
+
+  render();
+});
+
+function stats2(arr){
+  return {n:arr.length,mean:mean(arr),med:med(arr),win:100*arr.filter(x=>x>0).length/arr.length,cum:cum(arr)};
+}
+function bar(v){
+  const w=Math.min(45,Math.abs(v)*18);
+  return `<span class="bar"><i style="${v>=0?`left:50%;width:${w}px;background:#25c088`:`right:50%;width:${w}px;background:#f0556b`}"></i></span>`;
+}
+function table(rows,head){
+  let h='<table><thead><tr>'+head.map((x,i)=>`<th class="${i===0?'l':''}">${x}</th>`).join('')+'</tr></thead><tbody>';
+  rows.forEach(([nm,s])=>{
+    h+=`<tr><td class="l">${nm}</td><td>${s.n}</td>
+      <td class="${cls(s.mean)}">${fmt(s.mean)}</td>
+      <td class="${cls(s.med)}">${fmt(s.med)}</td>
+      <td>${s.win.toFixed(1)}%</td>
+      <td class="${cls(s.cum)}">${fmt(s.cum)}</td></tr>`;
+  });
+  return h+'</tbody></table>';
+}
+
+const qf=new URLSearchParams(location.search).get('f');
+if(qf&&document.getElementById('f-'+qf)){
+  FILTER=qf;
+  document.querySelectorAll('.ctrl button[id^=f-]').forEach(x=>x.classList.remove('on'));
+  document.getElementById('f-'+qf).classList.add('on');
+}
+document.querySelectorAll('.ctrl button[id^=f-]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.ctrl button[id^=f-]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); FILTER=b.id.slice(2); render();
+});
+document.querySelectorAll('#tbl th').forEach(th=>th.onclick=()=>{
+  const k=th.dataset.k; SORT={k,asc:SORT.k===k?!SORT.asc:true}; render();
+});
+
+function render(){
+  let list=TRADES;
+  if(FILTER==='keep') list=TRADES.filter(t=>t.hpr!=null&&t.hpr>=1);
+  if(FILTER==='drop') list=TRADES.filter(t=>t.hpr!=null&&t.hpr<1);
+  if(FILTER==='turn') list=TRADES.filter(t=>t.kind==='TURN');
+  if(FILTER==='close') list=TRADES.filter(t=>t.kind!=='TURN');
+  list=[...list].sort((a,b)=>{
+    const x=a[SORT.k],y=b[SORT.k];
+    if(x==null)return 1; if(y==null)return -1;
+    return (x>y?1:x<y?-1:0)*(SORT.asc?1:-1);
+  });
+  const tb=document.querySelector('#tbl tbody');
+  if(list.length){
+    const s=stats(list);
+    document.getElementById('live').innerHTML=
+      `当前筛选：<b>${list.length}</b> 笔 · 均值 <b class="${cls(s.mean)}">${fmt(s.mean)}</b> · 中位 <b class="${cls(s.med)}">${fmt(s.med)}</b> · 胜率 <b>${s.win.toFixed(1)}%</b> · 累计 <b class="${cls(s.cum)}">${fmt(s.cum)}</b>`;
+  } else document.getElementById('live').textContent='无匹配记录';
+  tb.innerHTML=list.map(t=>{
+    const tag=t.kind==='TURN'?'<span class="tag t-turn">拐头卖</span>':'<span class="tag t-close">收盘卖</span>';
+    return `<tr data-t="${t.T}">
+      <td class="l">${t.n}</td><td class="l">${t.T}</td><td class="l">${t.T1}</td>
+      <td>${t.buy.toFixed(2)}</td><td>${t.thr.toFixed(2)}</td>
+      <td class="l">${t.hit_t||'未触及'}</td>
+      <td>${t.sell.toFixed(2)}</td><td class="l">${t.et}</td>
+      <td class="l">${tag}</td>
+      <td class="${cls(t.gross)}">${fmt(t.gross)}</td>
+      <td class="${cls(t.net)}">${fmt(t.net)}</td>
+      <td>${t.hpr==null?'—':t.hpr.toFixed(2)+'%'}</td></tr>
+      <tr class="det" data-t="${t.T}" style="display:none"><td colspan="12"></td></tr>`;
+  }).join('');
+  tb.querySelectorAll('tr[data-t]').forEach(tr=>{
+    if(tr.classList.contains('det'))return;
+    tr.onclick=()=>{
+      const t=TRADES.find(x=>x.T===tr.dataset.t);
+      const det=[...tb.querySelectorAll('tr.det')].find(x=>x.dataset.t===t.T);
+      const show=det.style.display==='none';
+      det.style.display=show?'table-row':'none';
+      if(show&&!det.querySelector('td').innerHTML) det.querySelector('td').innerHTML=detail(t);
+    };
+  });
+}
+
+function detail(t){
+  const p=DATA.paths[t.T];
+  const idx=p.findIndex(x=>x[0]===t.et);
+  const hitIdx=p.findIndex(x=>x[0]===t.hit_t);
+  const from=Math.max(0,(t.hit_t?hitIdx:idx)-3);
+  const to=Math.min(p.length,idx+3);
+  let rows='';
+  for(let i=from;i<to;i++){
+    const [tm,pr]=p[i], prev=i>0?p[i-1][1]:null;
+    const mark=[];
+    if(i===hitIdx) mark.push('← 首次触及 +1%');
+    if(i===idx&&t.kind==='TURN') mark.push('← 高于前一分钟？否 → 卖出');
+    if(i===idx&&t.kind!=='TURN') mark.push('← 15:00 收盘卖出');
+    rows+=`<tr class="${i===idx?'hl':''}">
+      <td class="l">${tm}</td><td>${pr.toFixed(2)}</td>
+      <td>${prev==null?'—':((pr-prev>=0?'+':'')+(pr-prev).toFixed(2))}</td>
+      <td class="l">${mark.join(' ')}</td></tr>`;
+  }
+  return `<div style="padding:10px 0 4px">
+    <div class="mini" style="margin-bottom:6px">
+    ${t.T} 收盘买入 ${t.buy.toFixed(2)} → ${t.T1} 昨收 ${t.p0.toFixed(2)}，触发价 ${t.thr.toFixed(2)}（+1%）
+    ${t.hit_t?`，首次触及于 ${t.hit_t}（${t.hit_p.toFixed(2)}）`:'，全天未触及'}
+    ；最终 ${t.et} 以 ${t.sell.toFixed(2)} 卖出；毛 ${fmt(t.gross)}，扣费后 ${fmt(t.net)}</div>
+    <table style="max-width:640px"><thead><tr><th class="l">时间</th><th>分钟价</th><th>较前一分钟</th><th class="l">说明</th></tr></thead>
+    <tbody>${rows}</tbody></table>
+    <details style="margin-top:8px"><summary>展开卖出日 ${t.T1} 全部 240 根分钟价</summary>
+    <pre>${p.map(([tm,pr])=>tm+' '+pr.toFixed(2)).join('\n')}</pre></details>
+  </div>`;
+}
+</script>
+</body>
+</html>

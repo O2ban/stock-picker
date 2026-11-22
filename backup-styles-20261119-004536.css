@@ -1,0 +1,306 @@
+:root{
+  --bg:#0d0f0e;
+  --bg-elev:#161918;
+  --bg-elev2:#1d2120;
+  --line:#242a28;
+  --line-soft:#1b201f;
+  --ink:#e8ecea;
+  --ink-2:#a7b2ae;
+  --muted:#6f7b77;
+  --green:#157a52;
+  --green-bright:#22a06b;
+  --pale:#12241c;
+  --up:#f03b52;
+  --down:#12b886;
+  --tabbar-h:56px;
+  --top-h:52px;
+  /* 底部安全区：iPhone 全面屏的 Home 指示条（那根横线）会压在内容上，
+   * 而且贴着横线看很不舒服。所以在系统安全区之上再额外抬 8px，
+   * 保证底部任何机型都留出呼吸空间（无安全区的机型也有 8px）。 */
+  --safe-b:calc(env(safe-area-inset-bottom,0px) + 8px);
+  --safe-t:env(safe-area-inset-top,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html{margin:0;padding:0;height:100%;background:var(--bg);}
+body{
+  margin:0;padding:0;height:100%;min-height:100%;
+  background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:14px;line-height:1.4;
+  overflow:hidden;
+  touch-action:manipulation;                 /* 禁止双击缩放 */
+  -webkit-text-size-adjust:100%;
+  overscroll-behavior:none;
+  /* 外壳高度完全交给浏览器解析（height:100%），由 body 自己撑满视口：
+   * iOS standalone 下 100dvh 会把顶部安全区从高度里扣掉却不补回底部（WebKit #297779），
+   * 导致容器比屏幕矮一截、底部露出空隙。JS 不参与任何高度计算。 */
+  display:flex;flex-direction:column;
+}
+button{font-family:inherit;color:inherit;}
+input,select,textarea{font-family:inherit;font-size:16px;} /* 16px 防 iOS 聚焦放大 */
+.hidden{display:none !important;}
+[hidden]{display:none !important;}   /* 兜底：防止 display 覆盖 hidden 属性（如 .seg/.meta-pop） */
+
+/* ---------- 外壳 ---------- */
+.app-frame{
+  flex:1 1 auto;min-height:0;height:100%;display:flex;flex-direction:column;
+  width:100%;
+  padding-top:var(--safe-t);                 /* 顶部安全区用 padding 让开，不占高度 */
+}
+.app-top{
+  flex:0 0 auto;height:var(--top-h);display:flex;align-items:center;justify-content:space-between;
+  padding:0 16px;border-bottom:1px solid var(--line-soft);background:var(--bg);
+}
+.app-top-title{font-size:16px;font-weight:700;letter-spacing:.5px;}
+.app-top-status{font-size:11px;color:var(--muted);}
+.app-top-status.offline{color:#d8b25a;}
+.offline-tip{padding:6px 14px;font-size:11px;line-height:1.45;color:#d8b25a;background:#241f10;border-bottom:1px solid #3a3120;}
+
+.app-main{flex:1 1 auto;min-height:0;position:relative;}
+.tab-panel{position:absolute;inset:0;display:none;flex-direction:column;min-height:0;}
+.tab-panel.active{display:flex;}
+/* overflow-x 显式 hidden：只写 overflow-y 时另一轴会被规范强制为 auto，
+   任何超宽子元素（尤其 iOS 原生 date input）都能把整页横向拖走 */
+.scroll-area{flex:1 1 auto;min-height:0;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}
+
+/* ---------- 顶部操作条 ---------- */
+.bar{
+  flex:0 0 auto;display:flex;align-items:center;gap:10px;
+  padding:8px 12px;border-bottom:1px solid var(--line-soft);
+}
+.bar-lead{display:flex;align-items:baseline;gap:8px;flex:1 1 auto;min-width:0;}
+.bar-lead strong{font-size:15px;}
+.bar-meta{font-size:11px;color:var(--muted);}
+.bar-actions{display:flex;gap:6px;}
+.icon-btn{
+  width:34px;height:34px;border:1px solid var(--line);background:var(--bg-elev);
+  border-radius:9px;font-size:17px;line-height:1;color:var(--ink-2);
+  display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
+}
+.icon-btn:active{background:var(--bg-elev2);}
+.strategy-select{
+  flex:1 1 auto;min-width:0;height:38px;border:1px solid var(--line);border-radius:9px;
+  background:var(--bg-elev);color:var(--ink);padding:0 10px;font-size:14px;
+  appearance:none;-webkit-appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 16px) 17px,calc(100% - 11px) 17px;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat;
+}
+.run-btn{
+  flex:0 0 auto;height:38px;padding:0 22px;border:0;border-radius:9px;
+  background:var(--green);color:#fff;font-size:14px;font-weight:700;cursor:pointer;
+}
+.run-btn:disabled{opacity:.55;}
+.meta-row{
+  flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:6px 12px;border-bottom:1px solid var(--line-soft);
+  position:relative;                              /* 气泡定位基准 */
+}
+.run-meta{font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1 1 auto;min-width:0;cursor:pointer;}
+/* 点文字弹出的完整说明气泡：绝对定位于 meta-row 下方，点任意处关闭 */
+.meta-pop{
+  position:absolute;top:calc(100% + 4px);left:8px;right:8px;z-index:70;
+  background:var(--bg-elev2);border:1px solid var(--line);border-radius:10px;
+  padding:10px 12px;font-size:12px;line-height:1.75;color:var(--ink-2);
+  white-space:normal;word-break:break-word;
+  box-shadow:0 10px 30px rgba(0,0,0,.55);
+}
+.meta-pop .mp-row{display:flex;gap:8px;}
+.meta-pop .mp-k{flex:0 0 auto;color:var(--muted);min-width:3.5em;}
+.meta-pop .mp-v{flex:1 1 auto;color:var(--ink);}
+.ghost-btn{
+  flex:0 0 auto;border:1px solid var(--line);background:transparent;border-radius:7px;
+  padding:4px 9px;font-size:11px;color:var(--ink-2);cursor:pointer;
+}
+/* 涨幅排序按钮：激活（升/降序）时高亮，未激活时与普通次要按钮一致 */
+.ghost-btn.sort-btn.on{
+  border-color:var(--up);color:var(--up);font-weight:600;
+}
+/* 选股页列表上方行：日期标签（超出时横向滑动）与「策略与范围」按钮同行 */
+.meta-row#screen-top{
+  border-top:0;border-bottom:1px solid var(--line-soft);
+  gap:8px;padding:5px 12px;
+}
+.foot-scroll{
+  flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:8px;
+  overflow-x:auto;overflow-y:hidden;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+}
+.foot-scroll::-webkit-scrollbar{display:none;}
+.foot-scroll .history-bar{
+  flex:0 0 auto;border-top:0;background:transparent;padding:0;
+  overflow:visible;
+}
+/* 选股页底部只放选股说明文字 */
+.meta-row#screen-foot{
+  border-bottom:0;border-top:1px solid var(--line-soft);
+}
+/* 底部说明的气泡改为朝上弹出，避免超出屏幕底部被裁切 */
+.meta-row#screen-foot .meta-pop{
+  top:auto;bottom:calc(100% + 6px);
+}
+
+/* ---------- 股票列表 ---------- */
+.stock-list{list-style:none;margin:0;padding:0;}
+.stock-row{
+  display:flex;align-items:center;gap:12px;
+  padding:11px 12px;border-bottom:1px solid var(--line-soft);
+  cursor:pointer;position:relative;
+}
+.stock-row:active{background:var(--bg-elev);}
+.stock-row.active{background:var(--pale);}
+.sr-id{flex:0 0 30%;min-width:0;display:flex;flex-direction:column;gap:2px;}
+.sr-name{font-size:15px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sr-name.name-up{color:var(--up);}
+.sr-name.name-down{color:var(--down);}
+.sr-code{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:5px;}
+.sr-code .tag{font-size:9px;padding:0 3px;border-radius:2px;background:var(--bg-elev2);color:var(--ink-2);}
+.sr-spark{flex:1 1 auto;min-width:0;display:flex;justify-content:center;}
+.sr-spark canvas{width:100%;max-width:110px;height:36px;display:block;}
+.sr-quote{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:3px;min-width:64px;}
+.sr-pct{font-size:14px;font-weight:700;padding:3px 8px;border-radius:5px;color:#fff;font-variant-numeric:tabular-nums;}
+.sr-pct.up{background:var(--up);} .sr-pct.down{background:var(--down);}
+.sr-pct.flat{background:var(--muted);}
+.sr-price{font-size:13px;font-weight:600;color:var(--ink-2);font-variant-numeric:tabular-nums;}
+.sr-price.up{color:var(--up);} .sr-price.down{color:var(--down);}
+.sr-add{
+  flex:0 0 auto;margin-left:2px;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);
+  background:var(--bg-elev);color:var(--ink-2);font-size:16px;line-height:1;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;
+}
+.sr-add.on{background:var(--green);border-color:var(--green);color:#fff;}
+.sr-rank{flex:0 0 auto;width:22px;font-size:12px;color:var(--muted);text-align:center;font-weight:700;}
+
+.list-empty{
+  padding:56px 24px;text-align:center;color:var(--muted);font-size:13px;line-height:1.9;
+}
+.list-empty span{font-size:12px;color:#556059;}
+
+/* ---------- 历史 ---------- */
+.history-bar{
+  flex:0 0 auto;display:flex;align-items:center;gap:8px;overflow-x:auto;
+  padding:7px 12px;border-top:1px solid var(--line-soft);background:var(--bg);
+}
+.history-bar.hidden{display:none;}
+.history-label{font-size:10px;color:var(--muted);flex:0 0 auto;}
+.history-chip{
+  flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);
+  background:var(--bg-elev);border-radius:7px;padding:4px 9px;font-size:11px;color:var(--ink-2);cursor:pointer;
+}
+.history-chip.active{border-color:var(--green-bright);color:var(--ink);}
+.history-chip small{color:var(--muted);}
+
+/* ---------- 底部 tab ---------- */
+.tabbar{
+  flex:0 0 auto;height:calc(var(--tabbar-h) + var(--safe-b));
+  padding-bottom:var(--safe-b);
+  display:flex;border-top:1px solid var(--line-soft);background:var(--bg-elev);
+}
+.tab-btn{
+  flex:1 1 0;border:0;background:transparent;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  color:var(--muted);font-size:10px;padding:0;
+}
+.tab-btn svg{width:22px;height:22px;flex:0 0 auto;display:block;}
+.tab-btn span{line-height:1;flex:0 0 auto;}
+.tab-btn.active{color:var(--green-bright);}
+
+/* ---------- 下钻页 ---------- */
+.drill-page{
+  position:fixed;inset:0;z-index:55;background:var(--bg);
+  display:flex;flex-direction:column;
+  transform:translateX(100%);visibility:hidden;
+  transition:transform .24s ease,visibility .24s ease;
+  padding-top:var(--safe-t);
+  /* 全屏下钻页同样要避开底部 Home 指示条，否则最后一行内容贴边被压住 */
+  padding-bottom:var(--safe-b);
+}
+.drill-page.open{transform:translateX(0);visibility:visible;}
+.drill-head{
+  flex:0 0 auto;height:var(--top-h);display:flex;align-items:center;gap:10px;
+  padding:0 12px;border-bottom:1px solid var(--line-soft);
+}
+.drill-head > span{font-size:15px;font-weight:700;flex:1 1 auto;}
+.drill-back{
+  width:34px;height:34px;border:0;background:transparent;color:var(--ink);
+  font-size:26px;line-height:1;cursor:pointer;
+}
+.drill-action{
+  border:1px solid var(--line);background:var(--bg-elev);border-radius:7px;
+  padding:5px 11px;font-size:12px;color:var(--ink-2);cursor:pointer;
+}
+.drill-search-wrap{flex:0 0 auto;padding:10px 12px;border-bottom:1px solid var(--line-soft);}
+.drill-search{
+  width:100%;height:38px;border:1px solid var(--line);border-radius:9px;
+  background:var(--bg-elev);color:var(--ink);padding:0 12px;
+}
+.drill-search::placeholder{color:var(--muted);}
+.drill-body{flex:1 1 auto;min-height:0;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 0 24px;}
+.drill-body.no-pad{padding-bottom:0;}
+.drill-section{margin:18px 12px 6px;font-size:13px;color:var(--ink-2);font-weight:700;}
+
+/* 表单（下钻页内复用） */
+.field-label{display:block;margin:14px 12px 6px;font-size:12px;color:var(--ink-2);}
+.field-label span{color:var(--muted);font-weight:400;}
+.text-input,.select-input,.dsl-input{
+  width:calc(100% - 24px);margin:0 12px;
+  border:1px solid var(--line);border-radius:9px;background:var(--bg-elev);
+  color:var(--ink);padding:9px 11px;min-width:0;max-width:calc(100% - 24px);
+}
+/* iOS WebKit 给 input[type=date] 的 UA 固有最小宽度（mm/dd/yyyy + 日历图标）
+   大于窄容器，会撑破父宽导致横向溢出；去原生外观后宽度才受控 */
+.text-input[type=date]{-webkit-appearance:none;appearance:none;}
+.dsl-input{min-height:200px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;line-height:1.5;resize:vertical;}
+.field-hint{font-size:11px;color:var(--muted);margin:6px 12px 0;}
+.date-quick{display:flex;gap:8px;flex-wrap:wrap;margin:8px 12px 0;}
+.date-quick button{
+  border:1px solid var(--line);background:var(--bg-elev);border-radius:7px;
+  padding:5px 11px;font-size:12px;color:var(--ink-2);cursor:pointer;
+}
+.date-quick button.active{border-color:var(--green-bright);color:var(--ink);}
+.guardrail{
+  display:flex;gap:9px;margin:16px 12px 0;padding:11px 12px;
+  border:1px solid var(--line);border-radius:10px;background:var(--bg-elev);
+}
+.guardrail-dot{width:8px;height:8px;border-radius:50%;background:var(--green-bright);margin-top:5px;flex:0 0 auto;}
+.guardrail strong{font-size:12px;}
+.guardrail p{margin:3px 0 0;font-size:11px;color:var(--muted);}
+.feedback{font-size:12px;margin:12px 12px 0;color:var(--muted);}
+.feedback.success{color:var(--green-bright);}
+.feedback.error{color:var(--up);}
+
+/* ---------- 策略条件说明 ---------- */
+.strategy-summary{margin:14px 12px 0;border:1px solid var(--line);border-radius:10px;background:var(--bg-elev);}
+.strategy-summary > summary{cursor:pointer;padding:11px 12px;font-size:13px;font-weight:700;color:var(--ink);list-style:none;display:flex;align-items:center;gap:8px;}
+.strategy-summary > summary::-webkit-details-marker{display:none;}
+.strategy-summary > summary::before{content:'▸';color:var(--muted);transition:transform .18s ease;}
+.strategy-summary[open] > summary::before{transform:rotate(90deg);}
+.strategy-summary .ss-count{font-size:11px;font-weight:400;color:var(--muted);}
+.ss-body{padding:2px 12px 12px;}
+.ss-empty{margin:4px 0;font-size:12px;color:var(--muted);}
+.ss-invalid{color:var(--up);}
+.ss-group{margin:8px 0;}
+.ss-group-title{margin:0 0 4px;font-size:12px;font-weight:700;color:var(--green-bright);}
+.ss-list{margin:0;padding:0;list-style:none;}
+.ss-list li{display:flex;align-items:baseline;gap:8px;padding:4px 0;font-size:12px;color:var(--ink);border-top:1px dashed var(--line-soft);}
+.ss-list li:first-child{border-top:0;}
+.ss-text{flex:1 1 auto;}
+.ss-period{flex:0 0 auto;font-size:10px;color:var(--ink-2);background:var(--bg-elev2);border-radius:3px;padding:1px 5px;}
+
+/* chart.css 依赖的按钮 / 分段控件 */
+.button{border:1px solid var(--line);background:var(--bg-elev);color:var(--ink);border-radius:8px;padding:6px 11px;font-size:13px;cursor:pointer;}
+.button-quiet{font-size:12px;padding:5px 9px;color:var(--ink-2);}
+
+/* ---------- 策略说明 / 策略代码 并列页签 ---------- */
+.strategy-tabs{display:flex;gap:6px;margin:14px 12px 0;}
+.strategy-tabs .st-tab{
+  flex:1 1 0;min-width:0;border:1px solid var(--line);background:var(--bg-elev);
+  border-radius:8px;padding:7px 10px;font-size:13px;color:var(--ink-2);cursor:pointer;
+}
+.strategy-tabs .st-tab.active{border-color:var(--green-bright);color:var(--ink);font-weight:700;}
+.st-pane{display:none;}
+.st-pane.active{display:block;}
+
+/* ---------- 复盘页签（内嵌回测复盘） ---------- */
+.review-frame{flex:1 1 auto;width:100%;min-height:0;border:0;background:var(--bg);display:block;}

@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "name": "日周趋势与量能",
+  "universe": {
+    "excludeSt": true
+  },
+  "all": [
+    {
+      "period": "week",
+      "indicator": "close_above_ma",
+      "params": {
+        "length": 20
+      }
+    },
+    {
+      "period": "day",
+      "indicator": "volume_ratio",
+      "params": {
+        "length": 20,
+        "min": 1.2
+      }
+    }
+  ],
+  "limit": 100
+}

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0d0f13">
+<title>301557 常友科技 · 分时复盘</title>
+<link rel="stylesheet" href="./styles.css">
+<link rel="stylesheet" href="./ev301557.css">
+</head>
+<body class="ev-body">
+<div class="ev-frame">
+  <header class="ev-top">
+    <button id="ev-back" class="ev-back" type="button" aria-label="返回">‹</button>
+    <div class="ev-top-t">
+      <strong>常友科技 301557</strong>
+      <span id="ev-sub">一分钟口径 · 逐笔复盘</span>
+    </div>
+  </header>
+
+  <div class="ev-nav">
+    <button id="ev-prev" class="ev-btn" type="button">‹ 上一笔</button>
+    <span id="ev-pos" class="ev-pos">—</span>
+    <button id="ev-next" class="ev-btn" type="button">下一笔 ›</button>
+  </div>
+
+  <div class="ev-scroll">
+    <div id="ev-head" class="ev-head"></div>
+
+    <div class="ev-chartwrap">
+      <div class="ev-chart-t" id="ev-t-title">买入日</div>
+      <div id="ev-c-t" class="ev-chart"></div>
+    </div>
+    <div class="ev-chartwrap">
+      <div class="ev-chart-t" id="ev-t1-title">卖出日</div>
+      <div id="ev-c-t1" class="ev-chart"></div>
+    </div>
+
+    <div class="ev-legend">
+      <span><i class="dot buy"></i>买点（T 日 15:00 收盘）</span>
+      <span><i class="dot sell"></i>成交点</span>
+      <span><i class="dot hit"></i>该分钟最高价首次触及 +1%</span>
+      <span><i class="ln hi"></i>每分钟最高 / 最低</span>
+      <span><i class="ln"></i>昨收</span>
+      <span><i class="ln thr"></i>触发价 +1%</span>
+    </div>
+    <p class="ev-rule">卖出规则：卖出日任一分钟<b>最高价 ≥ 触发价（+1%）即刻卖出</b>，
+      成交价取「触发价」；若 09:31 开盘价已 ≥ 触发价，按<b>开盘价</b>成交。
+      全天最高价都没到，则按 15:00 收盘价卖出（仅作对照）。<br>
+      不买入规则：买入日<b>高昨比 &lt; 1%</b>（当日最高 ÷ 前一日收盘 − 1），
+      或买入日<b>收盘同时跌破 MA5 与 MA20</b>，任一成立则不买入。</p>
+
+    <div class="ev-stats" id="ev-stats"></div>
+    <div class="ev-sec">口径对照</div>
+    <div class="ev-groups" id="ev-groups"></div>
+    <div class="ev-sec">出场方式</div>
+    <div class="ev-kinds" id="ev-kinds"></div>
+    <div class="ev-sec">被过滤掉的笔（不买入）</div>
+    <div class="ev-gates" id="ev-gates"></div>
+    <div class="ev-sec">高昨比分档（100 笔候选）</div>
+    <div class="ev-buckets" id="ev-buckets"></div>
+
+    <div class="ev-tblwrap">
+      <div class="ev-tblhd"><span>全部 100 笔候选</span><span>点一行切到那一笔</span></div>
+      <table class="ev-tbl">
+        <thead><tr><th>#</th><th>买入日</th><th>卖出日</th><th>买入</th><th>卖出</th><th>出场</th><th>净收益</th><th>高昨比</th><th>是否买入</th></tr></thead>
+        <tbody id="ev-rows"></tbody>
+      </table>
+    </div>
+    <p class="ev-foot">所有数字直接取自同一份证据数据（100 笔明细 + 101 天一分钟最高/最低/收盘），
+      页面只做求和、与证据页同公式；未做任何重算或近似。</p>
+  </div>
+</div>
+<script src="./vendor/echarts.min.js"></script>
+<script src="./ev301557.js"></script>
+</body>
+</html>

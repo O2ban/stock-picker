@@ -1,0 +1,193 @@
+/* 看盘抽屉 + 列表交互 + 策略说明（深色主题，配合 styles.css 的移动端外壳） */
+
+/* ---------- 列表行交互 ---------- */
+.stock-row.active { background: #16221b; }
+.row-copy { border: 1px solid var(--line, #26332c); background: #141c17; border-radius: 6px; padding: 4px; line-height: 0; color: #9fb3a8; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; justify-content: center; }
+.row-copy svg { display: block; }
+.row-copy.copied { background: #14251c; border-color: #1fae6d; color: #3fd68b; }
+.row-copy.copy-failed { border-color: #b04f3b; color: #e0584a; }
+.row-copy:hover { background: #14251c; border-color: #1fae6d; color: #3fd68b; }
+
+.chart-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, .55); opacity: 0; pointer-events: none; transition: opacity .24s ease; z-index: 60; }
+.chart-backdrop.show { opacity: 1; pointer-events: auto; }
+
+/* ---------- 看盘抽屉 ---------- */
+.chart-drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 61;
+  width: 100vw; background: var(--bg, #0b0f13);
+  box-shadow: none;
+  display: flex; flex-direction: column;
+  /* 全面屏 iPhone 底部的 Home 指示条会压住图面最下面一格（量比副图底边）。
+   * 统一用全局 --safe-b（系统安全区 + 8px），和底部 tab 栏、下钻页保持一致的抬升量。 */
+  padding-bottom: var(--safe-b, 8px);
+  transform: translateX(103%); visibility: hidden;
+  transition: transform .26s ease, visibility .26s ease;
+}
+.chart-drawer.open { transform: translateX(0); visibility: visible; }
+
+.chart-head { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: calc(12px + env(safe-area-inset-top)) 52px 12px 16px; border-bottom: 1px solid var(--line, #26332c); }
+.chart-title { display: flex; align-items: baseline; gap: 8px; min-width: 0; flex: 1 1 auto; }
+.chart-title .stock-code { font-size: 15px; color: var(--ink, #e8f0ec); font-weight: 700; }
+.chart-title .stock-name { font-size: 15px; color: var(--ink, #e8f0ec); }
+.chart-title-actions { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; }
+.chart-icon-btn { width: 30px; height: 30px; border: 1px solid var(--line, #26332c); background: #131a16; border-radius: 6px; font-size: 17px; line-height: 1; color: var(--muted, #9fb3a8); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.chart-icon-btn:hover { border-color: var(--green, #1fae6d); color: var(--green, #1fae6d); }
+.chart-icon-btn.on { border-color: var(--green, #1fae6d); background: var(--green, #1fae6d); color: #06120c; }
+.chart-close { position: absolute; top: calc(8px + env(safe-area-inset-top)); right: 12px; width: 30px; height: 30px; border: 0; background: transparent; font-size: 22px; line-height: 1; color: var(--muted, #7c8f85); cursor: pointer; border-radius: 6px; }
+.chart-close:hover { background: #16221b; color: var(--ink, #e8f0ec); }
+.chart-toolbar { display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-bottom: 1px solid var(--line, #26332c); flex-wrap: wrap; }
+.seg { display: inline-flex; border: 1px solid var(--line, #26332c); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; background: #131a16; padding: 5px 10px; font-size: 12px; color: var(--muted, #9fb3a8); cursor: pointer; font-family: inherit; }
+.seg button + button { border-left: 1px solid var(--line, #26332c); }
+.seg button.active { background: var(--green, #1fae6d); color: #06120c; font-weight: 700; }
+
+/* 复权设置：默认前复权，三个选项收进三点菜单，点击⋯展开 */
+.adjust-menu-wrap { position: relative; margin-left: auto; }
+.adjust-toggle { width: 30px; height: 28px; border: 1px solid var(--line, #26332c); background: #131a16; border-radius: 6px; cursor: pointer; font-size: 16px; line-height: 1; color: var(--muted, #9fb3a8); font-family: inherit; }
+.adjust-toggle:hover { border-color: var(--green, #1fae6d); color: var(--green, #1fae6d); }
+.adjust-pop { position: absolute; top: calc(100% + 6px); right: 0; z-index: 5; background: #161f1a; box-shadow: 0 6px 18px rgba(0, 0, 0, .5); border-radius: 6px; }
+.adjust-pop[hidden] { display: none; }
+
+/* ---------- 行情条 ---------- */
+.chart-quote { display: block; padding: 8px 16px; border-bottom: 1px solid var(--line, #26332c); }
+/* 价格区独占整行：价格/涨跌/日期三项本来放得下，之前被右侧指标网格按内容挤压成窄条，日期被迫换行留下大片空白 */
+.chart-quote .q-main { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.chart-quote .q-grid { margin-top: 3px; }
+.chart-quote .q-date { font-size: 12px; font-weight: 700; color: var(--muted, #9fb3a8); white-space: nowrap; }
+.chart-quote .q-price, .chart-quote .q-chg { white-space: nowrap; }
+.chart-error { color: #e0584a; font-size: 12px; }
+/* 离线提示条：断网看的是本地留存的旧数据，必须明确告知日期，避免被当成实时价 */
+.chart-offline { padding: 5px 16px; font-size: 11px; line-height: 1.4; color: #d8b25a; background: #241f10; border-bottom: 1px solid #3a3120; }
+.chart-quote .q-price { font-size: 22px; font-weight: 800; line-height: 1; }
+.chart-quote .q-chg { font-size: 12px; font-weight: 700; }
+.chart-quote .q-price.up, .chart-quote .q-chg.up { color: #ff4d6a; }
+.chart-quote .q-price.down, .chart-quote .q-chg.down { color: #22d07a; }
+.chart-quote .q-grid { display: block; font-size: 12px; color: var(--muted, #7c8f85); }
+/* 指标行：列数和每行项目数由脚本按实际宽度算好（见 fillQuoteGrid），
+   这里只负责把每行的项等宽摆开，避免最后一项被挤到下一行留下大片空白 */
+.chart-quote .q-grid .q-row { display: grid; gap: 2px 12px; }
+.chart-quote .q-grid .q-row + .q-row { margin-top: 2px; }
+.chart-quote .q-grid .q-row > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chart-quote .q-grid b { color: var(--ink, #e8f0ec); font-weight: 700; }
+.chart-quote .q-grid b.up { color: #ff4d6a; }
+.chart-quote .q-grid b.down { color: #22d07a; }
+
+.chart-canvas { position: relative; flex: 1 1 auto; min-height: 0; width: 100%; touch-action: none; overflow: hidden; }
+
+/* ---------- 数据页签（复盘页 · 301557 统计与明细） ---------- */
+.chart-data{
+  flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  background:var(--bg,#0d0f0e);padding:12px 12px calc(var(--safe-b,0px) + 20px);
+}
+.chart-data[hidden]{display:none;}
+.chart-data .cd-empty{padding:48px 16px;text-align:center;color:var(--muted,#6f7b77);font-size:13px;line-height:1.9;}
+.chart-data .cd-sub{font-size:11px;color:var(--muted,#6f7b77);margin-bottom:10px;line-height:1.7;}
+.chart-data .cd-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+@media (min-width:720px){.chart-data .cd-stats{grid-template-columns:repeat(6,1fr);gap:8px;}}
+.chart-data .cd-card{background:#161f1a;border:1px solid #26332c;border-radius:8px;padding:7px 9px;}
+.chart-data .cd-card .k{font-size:10px;color:var(--muted,#6f7b77);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.chart-data .cd-card .v{font-size:15px;font-weight:700;margin-top:3px;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.chart-data .cd-card .v.pos{color:#f0556b;}
+.chart-data .cd-card .v.neg{color:#25c088;}
+.chart-data .cd-sec{margin:14px 0 2px;font-size:11px;color:var(--muted,#6f7b77);letter-spacing:.02em;}
+.chart-data .cd-tblwrap{border:1px solid #26332c;border-radius:10px;overflow-x:auto;background:#161f1a;margin-top:8px;}
+.chart-data .cd-tblwrap.cd-scroll{overflow-x:auto;overflow-y:hidden;}
+.chart-data table{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums;}
+.chart-data th{background:#1d2521;color:var(--muted,#6f7b77);font-weight:600;padding:7px 8px;text-align:right;border-bottom:1px solid #26332c;white-space:nowrap;}
+.chart-data th:first-child,.chart-data td:first-child{text-align:left;}
+.chart-data td{padding:7px 8px;text-align:right;border-bottom:1px solid #1b201f;color:#a7b2ae;white-space:nowrap;}
+.chart-data tr:last-child td{border-bottom:0;}
+.chart-data td.pos,.chart-data .pos{color:#f0556b;}
+.chart-data td.neg,.chart-data .neg{color:#25c088;}
+.chart-data tbody tr{cursor:pointer;}
+.chart-data tbody tr:hover{background:#1d2521;}
+.chart-data tbody tr.on{background:#12241c;}
+.chart-data tbody tr.skip{background:rgba(255,90,118,.045);}
+.chart-data tbody tr.skip td{color:#8a9591;}
+.chart-data td.st{font-size:11px;}
+.chart-data .ok{color:#3fd68b;}
+.chart-data .no{color:#ff8a9c;}
+.chart-data .cd-foot{margin-top:12px;font-size:11px;line-height:1.7;color:var(--muted,#6f7b77);}
+
+/* ---------- 分时浮层（复盘页 · 日K点日期弹出） ---------- */
+/* 相对屏幕定位、撑满屏幕宽：不受主图容器边距限制，贴到屏幕左右边缘。 */
+.chart-submin{
+  position:fixed;z-index:120;border:1px solid #26332c;border-radius:8px;
+  background:#10140f;overflow:hidden;display:flex;flex-direction:column;
+  box-shadow:0 8px 26px rgba(0,0,0,.6);
+}
+.chart-submin[hidden]{display:none;}
+.chart-submin .cs-head{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:4px 8px;font-size:11px;color:#a7b2ae;background:#161f1a;border-bottom:1px solid #26332c;
+}
+.chart-submin .cs-head b{color:#e8ecea;font-weight:700;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;}
+.chart-submin .cs-close{border:0;background:transparent;color:#7c8f85;font-size:15px;line-height:1;cursor:pointer;padding:2px 4px;}
+.chart-submin .cs-nav{border:0;background:transparent;color:#a7b2ae;font-size:16px;line-height:1;cursor:pointer;padding:2px 6px;flex:0 0 auto;}
+.chart-submin .cs-nav:hover:not(:disabled){color:#e8ecea;}
+.chart-submin .cs-nav:disabled{color:#4a5b56;cursor:default;}
+.chart-submin .cs-nav.disabled{color:#4a5b56;}
+.chart-submin .cs-canvas{flex:1 1 auto;min-height:0;width:100%;}
+.chart-submin .cs-empty{padding:14px 10px;font-size:11px;color:#d8b25a;text-align:center;line-height:1.7;}
+
+/* 每个 panel 顶部的指标数据行（DOM 覆盖层，允许换行） */
+.chart-legend-layer { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+.chart-legend-row {
+  /* 间距收到 4px、左右内边距 2px：原先 8px/5px 会让四位数价格那行只差几像素就折行，
+     折出来的第二行还会压到图面上（预留高度只按一行算） */
+  position: absolute; display: flex; flex-wrap: wrap; gap: 0 4px;
+  padding: 0 2px; font-size: 9px; line-height: 1.35;
+  color: #8a9c93; background: rgba(11, 15, 19, .55);
+}
+.chart-legend-row .cl-item { white-space: nowrap; }
+.chart-legend-row .cl-item i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+.chart-legend-row .cl-item b { color: var(--ink, #e8f0ec); font-weight: 700; }
+/* 320~340 这类窄屏：分时图第一行有 6 项（价格/均价/中/PP/HH/M20），
+   9px + 4px 间距会刚好超出几像素，把最后一项挤到第二行单独成行；
+   收紧到 8.5px/3px 后整行仍能排下，不必折行 */
+@media (max-width: 340px) {
+  .chart-legend-row { gap: 0 3px; font-size: 8.5px; }
+  .chart-legend-row .cl-item i { margin-right: 3px; }
+}
+
+@media (max-width: 860px) {
+  .chart-drawer { width: 100%; border-left: 0; }
+}
+
+/* ---------- 最近结果历史 ---------- */
+.history-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 14px calc(8px + var(--safe-b, 0px)); border-top: 1px solid var(--line, #26332c); }
+.history-bar .history-label { font-size: 11px; color: var(--muted, #7c8f85); }
+.history-chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line, #26332c); background: #131a16; border-radius: 999px; padding: 4px 10px; font-size: 11px; color: var(--muted, #9fb3a8); cursor: pointer; font-family: inherit; }
+.history-chip:hover { border-color: var(--green, #1fae6d); color: var(--green, #1fae6d); }
+.history-chip.active { border-color: var(--green, #1fae6d); background: #14251c; color: #3fd68b; }
+.history-chip small { color: #8a978f; }
+
+/* ---------- 看盘双画布：mainPane 当前股票 / previewPane 邻票预览 ---------- */
+.chart-pane { position: absolute; inset: 0; will-change: transform; }
+.chart-pane-preview { z-index: 2; }
+
+/* 底部日期标签：DOM 覆盖层两端对齐 */
+.chart-date-layer { position: absolute; inset: 0; pointer-events: none; z-index: 6; }
+.chart-date-label { position: absolute; font-size: 10px; color: var(--muted, #7c8f85); white-space: nowrap; }
+/* 量比副图两端极值：字号与刻度值一致，贴在面板内侧上下沿，不与图例/时间标签抢位置 */
+.chart-ratio-label { position: absolute; font-size: 9px; line-height: 11px; color: #5a6a65; white-space: nowrap; }
+
+.chart-error { padding: 6px 16px; }
+
+/* ---------- 策略条件说明（下钻页内） ---------- */
+.strategy-summary { margin: 10px 0 4px; border: 1px solid var(--line, #26332c); border-radius: 10px; background: #121a15; }
+.strategy-summary > summary { cursor: pointer; padding: 10px 12px; font-size: 13px; font-weight: 700; color: var(--ink, #e8f0ec); list-style: none; display: flex; align-items: center; gap: 8px; }
+.strategy-summary > summary::-webkit-details-marker { display: none; }
+.strategy-summary > summary::before { content: '▸'; color: var(--muted, #7c8f85); transition: transform .18s ease; }
+.strategy-summary[open] > summary::before { transform: rotate(90deg); }
+.strategy-summary .ss-count { font-size: 11px; font-weight: 400; color: #8a978f; }
+.ss-body { padding: 2px 12px 12px; }
+.ss-empty { margin: 4px 0; font-size: 12px; color: #8a978f; }
+.ss-invalid { color: #e0584a; }
+.ss-group { margin: 8px 0; }
+.ss-group-title { margin: 0 0 4px; font-size: 12px; font-weight: 700; color: var(--green, #1fae6d); }
+.ss-list { margin: 0; padding: 0; list-style: none; }
+.ss-list li { display: flex; align-items: baseline; gap: 8px; padding: 4px 0; font-size: 12px; color: var(--ink, #e8f0ec); border-top: 1px dashed #223029; }
+.ss-list li:first-child { border-top: 0; }
+.ss-text { flex: 1 1 auto; }
+.ss-period { flex: 0 0 auto; font-size: 10px; color: var(--muted, #9fb3a8); background: #182420; border-radius: 3px; padding: 1px 5px; }

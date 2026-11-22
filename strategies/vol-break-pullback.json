@@ -1,0 +1,141 @@
+{
+  "version": 1,
+  "name": "均线上方·量能压制后放量突破回缩",
+  "universe": {
+    "excludeSt": true
+  },
+  "limit": 100,
+  "vars": {
+    "ma5vol": {
+      "op": "ma",
+      "n": 5,
+      "args": [
+        {
+          "op": "field",
+          "name": "vol"
+        }
+      ]
+    },
+    "ma20close": {
+      "op": "ma",
+      "n": 20,
+      "args": [
+        {
+          "op": "field",
+          "name": "close"
+        }
+      ]
+    },
+    "volDown": {
+      "op": "<",
+      "args": [
+        {
+          "op": "field",
+          "name": "vol"
+        },
+        {
+          "var": "ma5vol"
+        }
+      ]
+    },
+    "volUp": {
+      "op": ">",
+      "args": [
+        {
+          "op": "field",
+          "name": "vol"
+        },
+        {
+          "var": "ma5vol"
+        }
+      ]
+    }
+  },
+  "all": [
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块一·股价站上20日均线",
+        "expr": {
+          "op": ">",
+          "args": [
+            {
+              "op": "field",
+              "name": "close"
+            },
+            {
+              "var": "ma20close"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块二·此前量能持续被5日均量压制(前3~22天中≥15天低于5日均量)",
+        "expr": {
+          "op": ">=",
+          "args": [
+            {
+              "op": "count",
+              "n": 20,
+              "args": [
+                {
+                  "op": "ref",
+                  "n": 3,
+                  "args": [
+                    {
+                      "var": "volDown"
+                    }
+                  ]
+                }
+              ]
+            },
+            15
+          ]
+        }
+      }
+    },
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块三·这两天刚放量突破5日均量(前1~2天中至少1天放量)",
+        "expr": {
+          "op": ">=",
+          "args": [
+            {
+              "op": "count",
+              "n": 2,
+              "args": [
+                {
+                  "op": "ref",
+                  "n": 1,
+                  "args": [
+                    {
+                      "var": "volUp"
+                    }
+                  ]
+                }
+              ]
+            },
+            1
+          ]
+        }
+      }
+    },
+    {
+      "period": "day",
+      "indicator": "expr",
+      "params": {
+        "label": "模块四·今日缩量且量能低于5日均量",
+        "expr": {
+          "var": "volDown"
+        }
+      }
+    }
+  ]
+}

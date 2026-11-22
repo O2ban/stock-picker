@@ -1,0 +1,91 @@
+import json, statistics
+d=json.load(open('raw2.json'))
+dates=d['dates']; daily=d['daily']; minute=d['minute']
+FEE=0.083
+R=lambda x: round(x+1e-9,2)
+alld=sorted(daily)
+pos={x:i for i,x in enumerate(alld)}
+
+# 除权检查：raw 与 qfq 比值变化点（仅诊断）
+import sqlite3
+con=sqlite3.connect('/home/ubuntu/kline-trainer/kline-server/data/kline.db')
+chk=con.execute("select date,close_raw,close_qfq from daily_kline where code='sz301557' order by date").fetchall()
+chk=[(a,float(b),float(c)) for a,b,c in chk if b and c]
+rat=[round(b/c,4) for a,b,c in chk]
+ex=[(chk[i][0],rat[i],rat[i-1]) for i in range(1,len(rat)) if abs(rat[i]-rat[i-1])>1e-4]
+print("ex-div(复权比变化) 日期:",ex)
+
+# 均线必须用前复权序列（跨除权连续）；买卖价与高昨比仍用原始价
+QFQ={a:c for a,b,c in chk}
+closes=[QFQ[x] for x in alld]
+
+def ma(day,n):
+    i=pos[day]
+    if i+1<n: return None
+    s=closes[i+1-n:i+1]
+    return sum(s)/n
+
+trades=[]; skipped=[]
+for i in range(len(dates)-1):
+    T=dates[i]; T1=dates[i+1]
+    bp=R(daily[T]['c'])
+    # 触发基准：T1 前一交易日收盘 = T 日收盘
+    p0=R(daily[T]['c'])
+    thr=round(p0*1.01,4)
+
+    # 过滤1：高昨比 = (T最高/T-1收盘-1)*100
+    prevT=R(daily[alld[pos[T]-1]]['c']) if pos[T]>0 else None
+    hpr=(R(daily[T]['h'])/prevT-1)*100 if prevT else None
+    # 过滤2：T收盘同时跌破 MA5 与 MA20（用复权口径比较，避免除权日错位）
+    m5=ma(T,5); m20=ma(T,20)
+    cqf=QFQ[T]
+    belowBoth = (m5 is not None and m20 is not None and cqf<m5 and cqf<m20)
+
+    bars=minute[T1]
+    # 触发：第一根 high>=thr
+    k=None
+    for j,b in enumerate(bars):
+        if b[2]>=thr: k=j; break
+    if k is None:
+        ep=R(bars[-1][4]); et='15:00'; kind='NOHIT_CLOSE'; hit_t=None; hit_p=None
+    else:
+        o=bars[k][1]; h=bars[k][2]
+        ep=R(max(o,thr))                     # 限价 thr 成交；跳空则以开盘价成交
+        et=bars[k][0]; kind='OPEN_GAP' if (k==0 and o>=thr) else 'TARGET'
+        hit_t=bars[k][0]; hit_p=R(h)
+    gross=(ep/bp-1)*100
+    rec={'n':i+1,'T':T,'T1':T1,'buy':bp,'sell':ep,'kind':kind,'et':et,'thr':thr,
+         'hit_t':hit_t,'hit_p':hit_p,'gross':round(gross,4),'net':round(gross-FEE,4),
+         'hpr':round(hpr,4) if hpr is not None else None,
+         'ma5':round(m5,4) if m5 else None,'ma20':round(m20,4) if m20 else None,
+         'below_both':belowBoth,'p0':p0,
+         'open':R(bars[0][1]),'close':R(bars[-1][4]),
+         'hi':R(max(b[2] for b in bars)),'lo':R(min(b[3] for b in bars))}
+    gate=[]
+    if hpr is None: gate.append('NO_PREVDATA')
+    elif hpr<1: gate.append('HPR_LT1')
+    if belowBoth: gate.append('BELOW_MA')
+    rec['gates']=gate
+    if gate: skipped.append(rec)
+    else: trades.append(rec)
+
+def stat(ts,label):
+    if not ts: print(label,'0'); return
+    ns=[t['net'] for t in ts]
+    cum=1.0
+    for x in ns: cum*= (1+x/100)
+    print(f"{label:22s} n={len(ts):3d} mean={sum(ns)/len(ns):+.4f} med={statistics.median(ns):+.4f} win={100*sum(1 for x in ns if x>0)/len(ns):.1f}% cum={100*(cum-1):+.4f}%")
+
+allt=trades+skipped
+allt.sort(key=lambda x:x['n'])
+stat(allt,'原规则(全部100笔)')
+stat(trades,'加过滤后')
+for k in ('TARGET','OPEN_GAP','NOHIT_CLOSE'):
+    stat([t for t in trades if t['kind']==k],k)
+print()
+print("被挡笔数",len(skipped))
+stat([t for t in skipped if 'HPR_LT1' in t['gates'] and 'BELOW_MA' not in t['gates']],'仅因高昨比<1%')
+stat([t for t in skipped if 'BELOW_MA' in t['gates'] and 'HPR_LT1' not in t['gates']],'仅因跌破双均线')
+stat([t for t in skipped if len(t['gates'])==2],'两条同时挡')
+json.dump({'trades':trades,'skipped':skipped,'all':allt,'fee':FEE},open('bt.json','w'))
+print('saved bt.json')
