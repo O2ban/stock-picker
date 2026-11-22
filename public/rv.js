@@ -23,6 +23,7 @@
 
   function $(id) { return document.getElementById(id); }
   function plainCode(c) { return String(c || '').replace(/^[a-z]{2}/i, ''); }
+  const EVIDENCE_CODES = ['301557', '603186']; // 有本地逐笔/分钟证据的股票（重算/参数面板仅对它们生效）
   function escapeAttr(s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
   }
@@ -59,12 +60,11 @@
   }
 
   /* ---------- 行 ---------- */
-  // 最近一次重算结果（rv-data.js 的 window.RVData.recompute），未重算为 null。
-  var lastRc = null;
-  function rcData() {
+  // 重算结果（rv-data.js 的 window.RVData.recompute）。证据票各自有独立重算值，按代码取。
+  function rcFor(code) {
     var rd = window.RVData;
-    if (rd && typeof rd.getLastRecompute === 'function') lastRc = rd.getLastRecompute();
-    return lastRc;
+    if (rd && typeof rd.getRc === 'function') return rd.getRc(code);
+    return null;
   }
   function rowInner(it, i) {
     return '<span class="sr-rank">' + (i + 1) + '</span>' +
@@ -80,11 +80,11 @@
   }
 
   // 行下方指标：胜率 / 平均盈亏 / 预期每笔 / 实际累计 / 笔数 + 凯利仓位
-  // 重算结果只对 301557 生效：覆盖 n/win/avgWin/avgLoss/mean/cum，保留 100 天高昨比两项。
+  // 重算结果只对证据票生效：rcFor 已按代码取到对应行的重算值，覆盖 n/win/avgWin/avgLoss/mean/cum，保留 100 天高昨比两项。
   function statBlock(it) {
-    var rc = rcData();
+    var rc = rcFor(it.code);
     var src = it;
-    if (rc && rc.bought && plainCode(it.code) === '301557') {
+    if (rc && rc.bought) {
       src = {
         n: rc.n,
         win: rc.win,
@@ -239,9 +239,9 @@
     items = (p.stocks || []).map(function (s) {
       return { code: s.code, name: s.name || '', n: s.n, mean: s.mean, med: s.med, win: s.win, cum: s.cum, avgWin: s.avgWin, avgLoss: s.avgLoss, hprAvg100: s.hprAvg100, hprGt1Pct100: s.hprGt1Pct100 };
     });
-    // 参数面板只在「含 301557 的证据票」时显示（重算仅对 301557 有效）。
+    // 参数面板只在「含证据票（301557/603186）」时显示（重算仅对证据票有效）。
     var recalcEl = $('rv-recalc');
-    if (recalcEl) recalcEl.hidden = !items.some(function (s) { return plainCode(s.code) === '301557'; });
+    if (recalcEl) recalcEl.hidden = !items.some(function (s) { return EVIDENCE_CODES.indexOf(plainCode(s.code)) >= 0; });
     var noteEl = $('rv-cond');
     if (noteEl) {
       noteEl.innerHTML = '';
@@ -276,16 +276,17 @@
     }
     if (empty) empty.hidden = items.length > 0;
     if (stamp) {
-      var rc = rcData();
       if (items.length) {
         // 方案级汇总：只求和/展示证据里已有的只读字段，不做任何再计算。
-        // 有重算结果时用重算值（301557），否则用方案里的静态字段。
-        var n = 0, sum = 0, winSum = 0, cnt = 0;
+        // 有重算结果时，对证据票用「重算值 + 其余票静态值」合并，否则全用方案里的静态字段。
+        var n = 0, sum = 0, winSum = 0, cnt = 0, rcHit = 0;
         for (var i = 0; i < items.length; i++) {
           var it = items[i];
           var src = it;
-          if (rc && rc.bought && plainCode(it.code) === '301557') {
+          var rc = EVIDENCE_CODES.indexOf(plainCode(it.code)) >= 0 ? rcFor(it.code) : null;
+          if (rc && rc.bought) {
             src = { n: rc.n, mean: rc.mean, win: rc.win };
+            rcHit++;
           }
           n += Number(src.n) || 0;
           if (Number.isFinite(src.mean)) { sum += Number(src.mean) * (Number(src.n) || 0); }
@@ -293,8 +294,9 @@
         }
         var mean = n ? sum / n : null;
         var win = cnt ? winSum / cnt : null;
-        var rcTxt = (rc && items.some(function (x) { return plainCode(x.code) === '301557'; }))
-          ? ' · 已重算' : '';
+        // 「已重算」标注：仅当方案里所有证据票都出了重算值时才标，避免只重算一只票时误标整表。
+        var evItems = items.filter(function (x) { return EVIDENCE_CODES.indexOf(plainCode(x.code)) >= 0; });
+        var rcTxt = (evItems.length > 0 && rcHit === evItems.length) ? ' · 已重算' : '';
         stamp.textContent = items.length + ' 只 · 合计 ' + n + ' 笔 · 加权均值 ' + pctText(mean) + ' · 加权胜率 ' + (win == null ? '—' : win.toFixed(1) + '%') + rcTxt;
       } else {
         stamp.textContent = '该方案暂无股票';

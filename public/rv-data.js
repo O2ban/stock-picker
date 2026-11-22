@@ -1,10 +1,10 @@
-/* 复盘数据页签：301557 逐笔统计与明细（挂在看盘抽屉的「数据」页签里）。
+/* 复盘数据页签：按股票代码加载本地证据，做逐笔统计与明细（挂在看盘抽屉的「数据」页签里）。
  *
- * 与 ev301557.js 的口径完全一致：
- *  - 数据源 public/ev301557-data.json（只读，前端只做「读字段 + 求和」）。
- *  - 统计函数与 6 卡 4 表直接复刻 ev301557.js 45-65 / 235-301。
- *  - 净收益 = net（已扣 0.083% 双边费用），前端不再扣。
- *  - 只有 301557 有证据；其他股票显示「暂无数据」，不套用。
+ * 口径与 ev301557.js 完全一致：
+ *  - 数据源按代码取：301557→ev301557-data.json、603186→ev603186-data.json（只读，前端只做「读字段 + 求和」）。
+ *  - 统计函数与 6 卡 4 表直接复刻 ev301557.js 45-65 / 235-301，两票共用同一套。
+ *  - 净收益 = net（已扣双边费用），前端不再扣。
+ *  - 只有证据清单（EVIDENCE_CODES）里的股票有证据；其余显示「暂无数据」，不套用。
  *
  * window.RVData 对外暴露的少量接口：
  *  - show({ code, name })：进入数据页签时渲染（code 可带前缀，内部取纯 6 位判断）。
@@ -14,7 +14,8 @@
 (function () {
   'use strict';
 
-  const EVIDENCE_CODE = '301557';
+  const EVIDENCE_CODES = ['301557', '603186']; // 有本地逐笔/分钟证据的股票代码（复用同一套渲染，仅取数文件不同）
+  const EVIDENCE_FILE = { '301557': './ev301557-data.json', '603186': './ev603186-data.json' };
 
   const C_BUY = '#3fd68b';
   const C_SELL = '#ff5a76';
@@ -39,8 +40,9 @@
   const el = (id) => document.getElementById(id);
   const plainCode = (c) => String(c || '').replace(/^[a-z]{2}/i, '');
 
-  let D = null;            // ev301557-data.json 证据数据
-  let loading = null;      // 防止并发加载
+  let D = null;            // 当前股票的证据数据（按 code 从 EVIDENCE_FILE 取）
+  let D_code = '';         // D 属于哪只票（纯 6 位代码），避免多票缓存时误用
+  const evidenceCache = {}; // { '301557': {...}, '603186': {...} } 按代码缓存证据
   let curCode = '';        // 当前展示的纯 6 位代码
   let subminChart = null;  // 分时浮层 ECharts 实例
   let subminOpen = false;
@@ -51,6 +53,8 @@
   let subminCode = '';     // 当前浮层对应的纯 6 位代码
   // 最近一次重算结果（含每笔的出场明细），供列表/数据页签/分时标注复用。
   let lastRecompute = null;
+  // 重算结果缓存：{ '301557': {...}, '603186': {...} }，按代码存，方案汇总/列表按代码取各自的重算值。
+  const rcCache = {};
   // 重算参数：默认复现原口径（止盈 1%，不设止损）。
   let rcParams = { tpPct: 1, slMode: 'none', slPct: -2 };
 
@@ -79,13 +83,13 @@
   // 是否买入：重算记录带 boolean bought，静态记录按 gates 判断。
   const recIsBought = (t) => (typeof t.bought === 'boolean') ? t.bought : isBought(t);
 
-  /* ---------- 参数可调回测引擎（前端重算，只对 301557 有效） ----------
+  /* ---------- 参数可调回测引擎（前端重算，只对有分钟证据的票有效） ----------
    *
    * 数据限制（必须明示，不要藏）：
    *  - 分钟序列只有收盘价（days），highs/lows/opens 都是 days 的副本，不是真分钟高低开。
    *    所以止盈/止损都按「该分钟收盘价」判定，无法判断分钟内瞬时高低点，精度受限。
    *  - 同一分钟既触止盈又触止损时无法分辨先后，沿用「止盈优先」（原口径就是止盈优先）。
-   *  - 本引擎只对 301557（有分钟证据）有效，其他票无分钟数据。
+   *  - 本引擎只对证据清单（EVIDENCE_CODES）里、有分钟证据的票有效，其他票无分钟数据。
    *
    * 参数：
    *  - tpPct：止盈百分比（%），默认 1（复现原口径）。
@@ -247,33 +251,55 @@
       slMode: (p.slMode === 'minute' || p.slMode === 'close') ? p.slMode : 'none',
       slPct: isFinite(Number(p.slPct)) ? Number(p.slPct) : -2,
     };
-    const run = () => {
+    // 计算一只票并把结果存入 rcCache，同时刷新数据页签/分时浮层。
+    const runOne = (code) => {
+      // 关键：recomputeEngine 读全局 D，必须先把全局数据指回这一只的证据，
+      // 否则两只票会共用最后加载的那只（D 停在末尾），把结果算到别人头上。
+      if (D_code !== code && evidenceCache[code]) {
+        D = evidenceCache[code];
+        D_code = code;
+      }
       const r = recomputeEngine(rcParams);
-      lastRecompute = r;
-      // 若数据页签当前正显示 301557，刷新其统计卡与明细表。
-      if (curCode === EVIDENCE_CODE && D) {
+      r.code = code;                       // 归属股票：rv.js 按此匹配到对应行
+      rcCache[code] = r;                   // 按代码缓存，方案汇总/列表各自取
+      // 数据页签正显示这只票则刷新统计卡与明细表。
+      if (plainCode(curCode) === code && D) {
         const box = el('chart-data');
         if (box) render(box, curCode);
       }
-      // 若分时浮层正开着（301557），用新参数重画当前日（买卖点会随止损变化）。
-      if (subminOpen && subminCode === EVIDENCE_CODE && subminDates.length) {
+      // 分时浮层正开着这只票则重画当前日（买卖点随止损变化）。
+      if (subminOpen && subminCode === code && subminDates.length) {
         renderSubminDate(subminDates[subminDateIdx] || subminDates[0], null);
       }
       return r;
     };
-    if (D) return Promise.resolve(run());
-    return loadEvidence().then(() => run()).catch((e) => { loading = null; throw e; });
+    // 对全部证据票逐只重算：一次点重算就把 301557 与 603186 都算完，
+    // 方案级汇总才能把两只的重算值一起加权合并。
+    const all = () => Promise.all(EVIDENCE_CODES.map((c) =>
+      (D && D_code === c) ? Promise.resolve() : loadEvidence(c)
+    )).then(() => {
+      const rs = EVIDENCE_CODES.map(runOne);
+      lastRecompute = (plainCode(curCode) && rcCache[plainCode(curCode)]) || rs[rs.length - 1];
+      // 关键：runOne 逐票把全局 D 指向各票，跑完停在最后一只；这里必须把全局数据
+      // 指回「当前正在展示」的票，否则之后读全局 D 的路径（明细行点击、分时浮层箭头）
+      // 会拿到别的票的数据，造成串票。
+      const cur = plainCode(subminCode) || plainCode(curCode) || '';
+      if (cur && evidenceCache[cur]) { D = evidenceCache[cur]; D_code = cur; }
+      return lastRecompute;
+    });
+    return all();
   }
 
   /* ---------- 加载证据 ---------- */
-  function loadEvidence() {
-    if (D) return Promise.resolve(D);
-    if (loading) return loading;
-    loading = fetch('./ev301557-data.json', { cache: 'no-store' })
+  // 按 code 加载对应证据文件；已缓存直接返回。返回 Promise<证据对象>。
+  function loadEvidence(code) {
+    const c = plainCode(code);
+    const file = EVIDENCE_FILE[c];
+    if (!file) return Promise.reject(new Error('无本地证据: ' + c));
+    if (evidenceCache[c]) { D = evidenceCache[c]; D_code = c; return Promise.resolve(D); }
+    return fetch(file, { cache: 'no-store' })
       .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .then((d) => { D = d; return d; })
-      .catch((e) => { loading = null; throw e; });
-    return loading;
+      .then((d) => { evidenceCache[c] = d; D = d; D_code = c; return d; });
   }
 
   /* ---------- 6 卡 4 表（复刻 ev301557.js 235-301） ---------- */
@@ -380,15 +406,15 @@
   function render(box, code) {
     const pc = plainCode(code);
     if (!box) return;
-    if (pc !== EVIDENCE_CODE) {
-      box.innerHTML = '<div class="cd-empty">暂无数据<br><span>仅 301557（常友科技）有逐笔复盘证据，其余股票不套用。</span></div>';
+    if (!EVIDENCE_CODES.includes(pc)) {
+      box.innerHTML = '<div class="cd-empty">暂无数据<br><span>仅常友科技(301557)、华正新材(603186)有逐笔复盘证据，其余股票不套用。</span></div>';
       return;
     }
-    loadEvidence().then(() => {
+    loadEvidence(pc).then(() => {
       // 加载期间可能又切了股票，按当前展示的代码判断
-      if (plainCode(curCode) !== EVIDENCE_CODE) return;
+      if (plainCode(curCode) !== pc) return;
       const sub = el('rvd-sub');
-      const rc = lastRecompute;
+      const rc = rcForCur();
       if (sub) {
         const nb = rc ? rc.n : D.all.filter(isBought).length;
         const p = rc ? rc.params : null;
@@ -617,8 +643,16 @@
     };
   }
 
+  // 取「当前展示股票」的重算结果：按代码从 rcCache 取，避免把上一只票的结果套到这只上。
+  // subminCode：看盘浮层正在展示的股票；curCode：数据页签打开的股票。
+  // 浮层可能没经过数据页签直接打开，此时 curCode 为空，只能认 subminCode。
+  function rcForCur() {
+    const c = plainCode(subminCode) || plainCode(curCode) || D_code;
+    return (c && rcCache[c]) || null;
+  }
   function tradeList() {
-    return (lastRecompute && lastRecompute.trades) ? lastRecompute.trades : D.all;
+    const rc = rcForCur();
+    return (rc && rc.trades) ? rc.trades : D.all;
   }
 
   // 浮层：买点画在 T 日 15:00，卖点画在 T1 日 et 时刻（未触发时 et 已是 15:00）。
@@ -631,7 +665,7 @@
     const box = el('rvd-submin-canvas');
     const head = el('rvd-submin-title');
     if (!box || !trades.length) return;
-    const rc = lastRecompute;
+    const rc = rcForCur();
     const marks = [];
     let dayKey = dstr, prevClose = null, thr = null;
 
@@ -670,7 +704,7 @@
 
     const hasSell = trades.some(({ kind, t }) => kind === 'sell' && recIsBought(t));
     const anyBought = trades.some(({ t }) => recIsBought(t));
-    let headTxt = `${dstr} · 301557`;
+    let headTxt = `${dstr} · ${subminCode || ''}`;
     if (thr != null) headTxt += ` · 触发价 ${thr.toFixed(2)}`;
     else if (!anyBought) headTxt += ' · 被过滤（对照）';
     else if (!hasSell) headTxt += ' · 15:00 收盘买入';
@@ -791,24 +825,24 @@
     const title = el('rvd-submin-title');
     if (!layer || !canvas) return;
     const pc = plainCode(code);
-    if (pc !== EVIDENCE_CODE) {
-      // 其他股票：请求真实分时（/api/timeline 带前缀 code）。缺数据明示，不插值。
-      // 无静态分时日期列表，禁用左右箭头。
-      subminDates = [];
-      subminDateIdx = -1;
-      await showRemoteSubmin(code, label, rect);
+    // 有本地证据的股票（301557、603186 等）：统一走证据文件路径，复用同一套渲染/联动/买卖点。
+    if (EVIDENCE_CODES.includes(pc)) {
+      await loadEvidence(pc).catch(() => {});
+      if (plainCode(code) !== pc) return;  // 又换股了
+      const dstr = label ? String(label).slice(0, 10) : '';
+      subminCode = pc;
+      // 有分时数据的日期列表：days 的所有键，按日期排序。
+      subminDates = D && D.days ? Object.keys(D.days).slice().sort() : [];
+      subminDateIdx = subminDates.indexOf(dstr);
+      if (subminDateIdx < 0) subminDateIdx = 0;
+      renderSubminDate(subminDates[subminDateIdx] || dstr, rect);
       return;
     }
-    // 301557：优先静态证据。
-    await loadEvidence().catch(() => {});
-    if (pc !== EVIDENCE_CODE) return;  // 又换股了
-    const dstr = label ? String(label).slice(0, 10) : '';
-    subminCode = pc;
-    // 有分时数据的日期列表：days 的所有键，按日期排序。
-    subminDates = D && D.days ? Object.keys(D.days).slice().sort() : [];
-    subminDateIdx = subminDates.indexOf(dstr);
-    if (subminDateIdx < 0) subminDateIdx = 0;
-    renderSubminDate(subminDates[subminDateIdx] || dstr, rect);
+    // 其他股票：请求真实分时（/api/timeline 带前缀 code）。缺数据明示，不插值。
+    // 无静态分时日期列表，禁用左右箭头。
+    subminDates = [];
+    subminDateIdx = -1;
+    await showRemoteSubmin(code, label, rect);
   }
 
   // 日K 主图（价格那块）在屏幕坐标里的下沿：浮层贴到这条线以下，
@@ -874,28 +908,33 @@
       const data = await fetchRemoteTimeline(code, date);
       const pts = (data && data.points) || [];
       if (!pts.length) throw new Error('该日无分时数据');
-      disposeSubmin();
-      canvas.innerHTML = '';
-      subminChart = echarts.init(canvas);
-      const cats = [];
-      for (let i = 0; i < 242; i++) cats.push(i);
-      subminChart.setOption({
-        animation: false,
-        grid: { left: 46, right: 54, top: 14, bottom: 22 },
-        xAxis: { type: 'category', data: cats.map(() => ''), boundaryGap: false,
-          axisLine: { lineStyle: { color: '#242a28' } }, axisTick: { show: false },
-          axisLabel: { show: false }, splitLine: { show: false } },
-        yAxis: { type: 'value', scale: true, axisLine: { show: false }, axisTick: { show: false },
-          axisLabel: { color: '#6f7b77', fontSize: 9, formatter: (v) => v.toFixed(2) },
-          splitLine: { lineStyle: { color: 'rgba(255,255,255,.05)' } } },
-        tooltip: { show: false },
-        series: [{ name: 'PRICE', type: 'line', data: pts.map((p) => p.price), symbol: 'none',
-          smooth: false, connectNulls: false, lineStyle: { width: 1.2, color: C_LINE } }],
-      }, true);
+      drawSubminLine(canvas, pts);
       resizeSubmin();
     } catch (e) {
       canvas.innerHTML = '<div class="cs-empty">' + ((e && e.message) || '分时获取失败') + '</div>';
     }
+  }
+
+  // 用 echarts 画一条分时价格线（pts: [{price}]）
+  function drawSubminLine(canvas, pts) {
+    disposeSubmin();
+    canvas.innerHTML = '';
+    subminChart = echarts.init(canvas);
+    const cats = [];
+    for (let i = 0; i < 242; i++) cats.push(i);
+    subminChart.setOption({
+      animation: false,
+      grid: { left: 46, right: 54, top: 14, bottom: 22 },
+      xAxis: { type: 'category', data: cats.map(() => ''), boundaryGap: false,
+        axisLine: { lineStyle: { color: '#242a28' } }, axisTick: { show: false },
+        axisLabel: { show: false }, splitLine: { show: false } },
+      yAxis: { type: 'value', scale: true, axisLine: { show: false }, axisTick: { show: false },
+        axisLabel: { color: '#6f7b77', fontSize: 9, formatter: (v) => v.toFixed(2) },
+        splitLine: { lineStyle: { color: 'rgba(255,255,255,.05)' } } },
+      tooltip: { show: false },
+      series: [{ name: 'PRICE', type: 'line', data: pts.map((p) => p.price), symbol: 'none',
+        smooth: false, connectNulls: false, lineStyle: { width: 1.2, color: C_LINE } }],
+    }, true);
   }
 
   function hideSubmin() {
@@ -940,13 +979,16 @@
       renderSubminDate(subminDates[i], null);
     },
     // 前端重算引擎：返回 Promise<重算结果>，并让数据页签/分时浮层用新结果刷新。
-    // 只对 301557 有效（其他票无分钟数据）。
+    // 只对证据清单（EVIDENCE_CODES）里、有分钟证据的票有效，其他票无分钟数据。
     recompute,
     // 供 rv.js 取最近一次重算结果（null 表示未重算）。
     getLastRecompute: () => lastRecompute,
+    // 按 6 位代码取该票的重算结果（无则 undefined），供列表按行归属匹配。
+    getRc: (code) => rcCache[plainCode(code)],
     getParams: () => rcParams,
-    // 供 rv.js 判断证据是否已加载（决定是否显示重算面板/是否可重算）。
-    hasEvidence: () => !!D,
+    // 供 rv.js 判断「当前股票」证据是否已加载（决定是否显示重算面板/是否可重算）。
+    // D_code 与 curCode 一致才算数，避免还留着上一只票的数据时误判。
+    hasEvidence: () => !!D && D_code === curCode && EVIDENCE_CODES.includes(curCode),
     close() {
       hideSubmin();
       curCode = '';
